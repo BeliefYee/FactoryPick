@@ -1,0 +1,19 @@
+# Eclipse / Spring Tool Suite workspace
+.metadata/
+
+# Eclipse project files
+**/bin/
+**/.settings/
+**/.classpath
+**/.project
+
+# Gradle
+**/.gradle/
+**/build/
+
+# React
+**/node_modules/
+**/dist/
+
+# Environment
+**/.env
