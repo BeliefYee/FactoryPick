@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: "optional:file:./.env[.properties]"
   application:
     name: factorypick-backend
   datasource:
@@ -24,3 +26,8 @@ factorypick:
     username: ${ADMIN_USERNAME:admin}
     password: ${ADMIN_PASSWORD:admin1234}
     token-hours: ${ADMIN_TOKEN_HOURS:8}
+  public-data:
+    base-url: https://apis.data.go.kr/B550624/fctryRegistInfo
+    service-key: ${DATA_GO_KR_SERVICE_KEY}
+    page-size: ${DATA_GO_KR_PAGE_SIZE:100}
+    response-type: json
