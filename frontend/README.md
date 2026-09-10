@@ -1,16 +1,38 @@
-# React + Vite
+# FactoryPick 프론트엔드
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite로 만든 공장·제품 조회 대시보드입니다. 참고 이미지의 어두운 화면 구성을 사용하며 모든 수치는 backend API에서 읽습니다.
 
-Currently, two official plugins are available:
+## 실행
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. 로컬 MySQL과 backend를 실행합니다 (`backend` 폴더에서 `./gradlew.bat bootRun`).
+2. `frontend` 폴더에서 최초 1회 `npm ci`를 실행합니다.
+3. `.env`에 `VITE_KAKAO_JAVASCRIPT_KEY`를 입력합니다. 카카오 JavaScript SDK 도메인에 `http://localhost:5173`을 등록합니다.
+4. `npm run dev` 후 http://localhost:5173 에 접속합니다.
 
-## React Compiler
+개발 중 /api 요청은 localhost:8080으로 프록시됩니다. 지도 키가 없어도 검색·목록·상세·통계는 사용할 수 있습니다. 지도 영역에는 설정 안내가 표시됩니다.
+운영 배포에서는 /api 경로를 Spring 서버로 프록시해야 합니다.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 화면
 
-## Expanding the ESLint configuration
+- 지도: 카테고리 클릭 즉시 공장 검색과 마커에 동일 조건 적용. 지역·시군구·공장/기업/주소·생산제품 복합 검색. 기본 카카오 마커 선택 시 우측 공장 상세 표시.
+- 공장 목록: 페이지 조회, 상세 확인, 지도 이동.
+- 제품 목록: 카테고리·제품명 검색, 제품 상세와 생산 공장 목록.
+- 통계: 전체 DB 기준 카테고리별·지역별·제품별 공장 수. 복수 카테고리 공장은 각 분류에 중복 집계되므로 분류별 합계는 전체 공장 수와 다를 수 있습니다.
+- 데이터 관리: 관리자 로그인/로그아웃, 공장·제품 등록/수정/삭제, 공장별 생산제품 연결, CSV 업로드 및 결과·이력. 좌표 없는 공장의 상세에서 주소→좌표 변환 실행 가능.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+관리자 세션은 현재 브라우저 탭의 sessionStorage에 유지되며 토큰 만료·401 응답 시 해제됩니다.
+카카오 REST API 키는 backend/.env에서만 설정합니다. 자세한 설정은 ../backend/KAKAO.md를 참고하세요.
+
+## 표시 범위
+
+실제 DB 카테고리를 사용하며 자동차·반도체 같은 샘플 분류를 임의 생성하지 않습니다.
+매출, 생산량, 가동률, 불량률, 제품/공장 사진, 알림, 리포트 기능은 해당 데이터/API가 없어 넣지 않았습니다.
+공장 규모는 상세에서 확인·관리할 수 있지만 backend 검색 조건이 아니므로 필터에서는 제외합니다.
+마커 이미지와 아이콘 분류·클러스터는 추가하지 않았습니다. 좌표가 없는 공장은 목록에만 나타납니다.
+지도 마커는 영역당 최대 10,000곳이며 도달 시 확대 안내를 표시합니다.
+
+## 검증
+
+`npm run build`, `npm run lint`
+
+백엔드 지도 API는 /api/factories/markers의 기존 영역 파라미터에 keyword, sido, sigungu, product, category를 추가로 받습니다.

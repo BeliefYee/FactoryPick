@@ -11,18 +11,19 @@ public class StatisticsRepository {
     public StatisticsRepository(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     public List<StatisticsResponse> byRegion() {
-        return query("SELECT sido label, COUNT(*) count FROM factories GROUP BY sido ORDER BY count DESC");
+        return query("SELECT COALESCE(r.sido_name,'미분류') label, COUNT(*) count FROM factory f LEFT JOIN region r ON r.region_id=f.region_id GROUP BY r.sido_name ORDER BY count DESC");
     }
     public List<StatisticsResponse> byCategory() {
         return query("""
-                SELECT p.category label, COUNT(DISTINCT fp.factory_id) count FROM products p
-                JOIN factory_products fp ON fp.product_id=p.product_id GROUP BY p.category ORDER BY count DESC
+                SELECT COALESCE(c.category_name,'미분류') label, COUNT(DISTINCT fp.factory_id) count FROM product p
+                LEFT JOIN category c ON c.category_id=p.category_id
+                JOIN factory_product fp ON fp.product_id=p.product_id GROUP BY c.category_id,c.category_name ORDER BY count DESC
                 """);
     }
     public List<StatisticsResponse> byProduct() {
         return query("""
-                SELECT p.product_name label, COUNT(DISTINCT fp.factory_id) count FROM products p
-                LEFT JOIN factory_products fp ON fp.product_id=p.product_id GROUP BY p.product_id,p.product_name ORDER BY count DESC
+                SELECT p.product_name label, COUNT(DISTINCT fp.factory_id) count FROM product p
+                LEFT JOIN factory_product fp ON fp.product_id=p.product_id GROUP BY p.product_id,p.product_name ORDER BY count DESC
                 """);
     }
     private List<StatisticsResponse> query(String sql) {

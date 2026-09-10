@@ -40,8 +40,14 @@ public class FactoryController {
     public List<MapMarkerResponse> markers(@RequestParam(defaultValue="33.0") double south,
                                             @RequestParam(defaultValue="124.0") double west,
                                             @RequestParam(defaultValue="39.0") double north,
-                                            @RequestParam(defaultValue="132.0") double east) {
+                                            @RequestParam(defaultValue="132.0") double east,
+                                            @RequestParam(required=false) String keyword,
+                                            @RequestParam(required=false) String sido,
+                                            @RequestParam(required=false) String sigungu,
+                                            @RequestParam(required=false) String product,
+                                            @RequestParam(required=false) String category) {
         if (south > north || west > east) throw new IllegalArgumentException("지도 영역 좌표가 올바르지 않습니다.");
-        return repository.markers(south, west, north, east);
+        return repository.markers(south, west, north, east,
+                new FactorySearchCondition(keyword, sido, sigungu, product, category, 0, 20));
     }
 }
