@@ -4,7 +4,7 @@
 
 ## 기술 구성
 
-- Java 21
+- Java 17
 - Spring Boot 3.5.7
 - Spring JDBC (`NamedParameterJdbcTemplate`)
 - MySQL 8
@@ -24,7 +24,7 @@
 
 ## 1. 실행 준비
 
-### 방법 A: 로컬 MySQL
+### 로컬 MySQL
 
 MySQL에서 데이터베이스를 한 번 생성합니다.
 
@@ -34,11 +34,39 @@ CREATE DATABASE factorypick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 기본 접속 정보는 `root / 1234`입니다. 다르면 환경변수를 지정하거나 `src/main/resources/application.yml`을 수정합니다.
 
-### 방법 B: Docker MySQL
+MySQL 서비스를 먼저 실행합니다. Windows에서는 서비스 목록의 `MySQL80` 상태가 실행 중인지 확인합니다.
 
-```bash
-docker compose up -d
+### DB 구조
+
+`etc` 코드에서 확인한 구조에 맞춰 `company`, `region`, `factory`, `category`, `product`, `factory_product`를 사용합니다.
+공장은 회사·지역 ID를, 제품은 카테고리 ID를 참조하며 공장과 제품은 연결 테이블로 다대다 관계를 맺습니다. 아직 확인되지 않은 연결은 NULL을 허용합니다.
+기존 REST API 주소와 요청·응답 필드는 유지합니다. 이름으로 받은 회사·지역·분류는 서버에서 ID로 변환합니다.
+
+`etc`에는 DDL이 없으므로 타입·제약조건은 이 프로젝트의 `src/main/resources/schema.sql`에서 정의했습니다.
+기존 기능을 위해 `business_number`, `factory_scale`, 생성·수정 시각과 `admins`, `data_imports`는 보존합니다.
+`factory.employee_count` 등 공공데이터 필드는 조회 응답에 포함하며, 현재 관리자 입력 DTO에서는 수정하지 않습니다.
+지역의 시·군·구 미지정 값은 DB에 빈 문자열로 저장하고 기존 API에는 null로 반환합니다.
+
+### 기존 DB를 사용하는 경우: 최초 1회 이전
+
+이미 정규화된 DB를 사용 중이라면 아래 `001` 대신 `migrations/002-public-data-fields.sql`만 최초 1회 실행합니다.
+`002`는 기존 정규화 스키마를 공공데이터 필드가 있는 최신 구조로 변경합니다. 새 DB에 최신 `schema.sql`을 적용했다면 실행하지 않습니다.
+MySQL의 ALTER TABLE은 암묵적으로 커밋되므로 백업 후 서버를 중지한 상태에서 실행하고, 실패 시 적용된 구조를 확인한 뒤 이어서 처리해야 합니다.
+
+서버를 중지하고 DB를 백업한 뒤, `backend` 폴더에서 아래 순서로 실행합니다.
+Windows PowerShell에서도 실행할 수 있으며, mysql.exe가 PATH에 있어야 합니다.
+
+```powershell
+cmd /c "mysql --default-character-set=utf8mb4 -u root -p factorypick < src\main\resources\schema.sql"
+cmd /c "mysql --default-character-set=utf8mb4 -u root -p factorypick < migrations\001-normalize-legacy.sql"
 ```
+
+첫 명령이 성공한 뒤 두 번째 명령을 실행합니다. `--force`는 사용하지 않습니다.
+배치 실행 중 SQL 오류가 나면 연결이 종료되어 미완료 트랜잭션은 롤백됩니다.
+이전 대상인 새 테이블 6개가 비어 있을 때 한 번만 실행합니다.
+이전 스크립트는 기존 ID·생산 관계·데이터를 복사하며 이전 테이블은 삭제하지 않습니다.
+관리자와 업로드 이력은 기존 테이블을 그대로 사용합니다. 이전 완료 후 앱은 새 테이블만 사용합니다.
+기존 `etc` DB가 따로 있다면 이 스크립트의 대상이 아닙니다. 먼저 컬럼과 제약조건을 schema.sql과 비교해야 합니다.
 
 ## 2. 백엔드 실행
 
@@ -56,7 +84,9 @@ Gradle을 별도로 설치할 필요는 없습니다. 프로젝트에 포함된 
 
 실행 확인: `GET http://localhost:8080/api/health`
 
-서버가 시작되면 `schema.sql`과 `data.sql`이 실행되고 예제 공장·제품 데이터가 등록됩니다.
+서버가 시작되면 `schema.sql`로 없는 테이블을 생성합니다. 기존 데이터 이전이나 예제 데이터 삽입은 자동 실행하지 않습니다.
+새 DB에서 예제가 필요하면 `sample-data/seed.sql`을 빈 테이블에 최초 1회 실행합니다. 기존 DB 이전과 샘플 삽입 중 상황에 맞는 하나만 진행합니다.
+DB 구조를 별도로 관리한다면 `.env`에 `DB_INIT_MODE=never`를 설정할 수 있습니다.
 
 ## 관리자 로그인
 
@@ -134,8 +164,9 @@ GET /api/factories?keyword=식품&sido=서울특별시&category=가공식품&pag
 
 `sample-data/factories.csv`를 형식 예제로 사용할 수 있습니다. 인코딩은 UTF-8이며 필수 열은 다음과 같습니다.
 
-- `factory_name`, `company_name`, `address`, `sido`
-- `latitude`, `longitude`
+- `factory_name`
+
+회사명·주소·지역·좌표·제품 카테고리는 미확정이면 비워둘 수 있습니다. 위도·경도는 둘 다 입력하거나 둘 다 비워야 합니다.
 
 중복 판정의 기본 키는 `business_number`입니다. 같은 사업자번호의 행을 다시 올리면 기존 공장 정보를 수정합니다. 제품명과 카테고리 조합도 중복 저장되지 않습니다.
 
@@ -147,12 +178,22 @@ curl -X POST http://localhost:8080/api/admin/data/imports/csv \
 
 ## 화면 연계
 
+카카오 지도 표시와 공장 주소의 좌표 변환 설정은 [KAKAO.md](KAKAO.md)를 참고하세요.
+
 - `SCR-01~05, SCR-11`: 공장 검색 및 마커 API
 - `SCR-06~07`: 공장 상세 API
 - `SCR-08~10`: 통계 API
 - `SCR-12`: 제품 API
 - `SCR-13~16, SCR-18`: 관리자 인증 및 CRUD API
 - `SCR-17, SCR-19`: CSV 등록 및 처리 이력 API
+
+## 테스트
+
+`./gradlew.bat test`로 CSV 파서 테스트를 실행합니다.
+MySQL 통합 테스트는 별도의 빈 테스트 DB를 만들고 `MYSQL_TEST_URL`을 지정하면 함께 실행됩니다.
+예: `jdbc:mysql://localhost:3306/factorypick_normalization_test?allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul`.
+접속 계정은 `MYSQL_TEST_USERNAME`, `MYSQL_TEST_PASSWORD`로 지정하며 기본값은 로컬 개발 DB와 같습니다.
+실제 사용하는 DB를 지정하지 마세요. 테스트는 스키마와 관리자 계정을 생성하며, 테스트별 데이터 변경은 롤백합니다.
 
 ## 배포 전 확인사항
 

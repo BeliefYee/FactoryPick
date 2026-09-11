@@ -11,7 +11,7 @@ class CsvParserTest {
         String csv = "name,address,note\n\"공장, 1\",서울,\"좋은 \"\"제품\"\"\"\n";
         var rows = CsvParser.parse(new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)));
         assertThat(rows).hasSize(1);
-        assertThat(rows.getFirst().get("name")).isEqualTo("공장, 1");
-        assertThat(rows.getFirst().get("note")).isEqualTo("좋은 \"제품\"");
+        assertThat(rows.get(0).get("name")).isEqualTo("공장, 1");
+        assertThat(rows.get(0).get("note")).isEqualTo("좋은 \"제품\"");
     }
 }

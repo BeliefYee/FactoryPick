@@ -13,6 +13,10 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    ResponseEntity<ApiError> status(org.springframework.web.server.ResponseStatusException e, HttpServletRequest request) {
+        return response(HttpStatus.valueOf(e.getStatusCode().value()), e.getReason(), request, Map.of());
+    }
     @ExceptionHandler(NotFoundException.class)
     ResponseEntity<ApiError> notFound(NotFoundException e, HttpServletRequest request) {
         return response(HttpStatus.NOT_FOUND, e.getMessage(), request, Map.of());

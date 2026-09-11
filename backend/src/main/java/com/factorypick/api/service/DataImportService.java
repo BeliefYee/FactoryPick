@@ -39,7 +39,7 @@ public class DataImportService {
                     }
                     String productName = row.getOrDefault("product_name", "").trim();
                     String category = row.getOrDefault("category", "").trim();
-                    if (!productName.isBlank() && !category.isBlank()) {
+                    if (!productName.isBlank()) {
                         long productId = products.findByNameAndCategory(productName, category)
                                 .map(Product::productId)
                                 .orElseGet(() -> products.insert(new ProductRequest(productName, category, row.get("product_description"))));
@@ -64,7 +64,7 @@ public class DataImportService {
 
     private FactoryRequest factoryRequest(Map<String, String> row) {
         return new FactoryRequest(blank(row.get("business_number")), required(row, "factory_name"),
-                required(row, "company_name"), required(row, "address"), required(row, "sido"),
+                blank(row.get("company_name")), blank(row.get("address")), blank(row.get("sido")),
                 blank(row.get("sigungu")), decimal(row, "latitude"), decimal(row, "longitude"),
                 blank(row.get("industry")), integer(row.get("established_year")),
                 blank(row.get("factory_scale")), blank(row.get("phone")));
@@ -75,6 +75,7 @@ public class DataImportService {
         return value;
     }
     private BigDecimal decimal(Map<String, String> row, String key) {
+        if (blank(row.get(key)) == null) return null;
         try { return new BigDecimal(required(row, key)); }
         catch (NumberFormatException e) { throw new IllegalArgumentException(key + " 형식이 올바르지 않습니다."); }
     }

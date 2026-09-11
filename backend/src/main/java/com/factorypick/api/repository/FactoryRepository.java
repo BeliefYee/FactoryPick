@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.*;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,51 +18,70 @@ import java.util.*;
 public class FactoryRepository {
     private final NamedParameterJdbcTemplate jdbc;
 
-    public FactoryRepository(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
+    private final ReferenceRepository references;
+    public FactoryRepository(NamedParameterJdbcTemplate jdbc, ReferenceRepository references) {
+        this.jdbc = jdbc; this.references = references;
+    }
+    static final String FROM = " FROM factory f LEFT JOIN company c ON c.company_id=f.company_id LEFT JOIN region r ON r.region_id=f.region_id ";
+    static final String SELECT = "SELECT f.*, c.company_name, r.sido_name AS sido, NULLIF(r.sigungu_name,'') AS sigungu, f.industry_name AS industry" + FROM;
 
     private static final RowMapper<Factory> MAPPER = (rs, rowNum) -> map(rs);
 
     public List<Factory> search(FactorySearchCondition c) {
-        String sql = "SELECT f.* FROM factories f " + where() +
+        String sql = SELECT + where() +
                 " ORDER BY f.factory_id DESC LIMIT :limit OFFSET :offset";
         MapSqlParameterSource p = params(c).addValue("limit", c.size()).addValue("offset", c.page() * c.size());
         return jdbc.query(sql, p, MAPPER);
     }
 
     public long count(FactorySearchCondition c) {
-        Long result = jdbc.queryForObject("SELECT COUNT(*) FROM factories f " + where(), params(c), Long.class);
+        Long result = jdbc.queryForObject("SELECT COUNT(*)" + FROM + where(), params(c), Long.class);
         return result == null ? 0 : result;
     }
 
     public Optional<Factory> findById(long id) {
-        return jdbc.query("SELECT * FROM factories WHERE factory_id=:id", Map.of("id", id), MAPPER).stream().findFirst();
+        return jdbc.query(SELECT + " WHERE f.factory_id=:id", Map.of("id", id), MAPPER).stream().findFirst();
     }
 
     public Optional<Factory> findByBusinessNumber(String businessNumber) {
         if (businessNumber == null || businessNumber.isBlank()) return Optional.empty();
-        return jdbc.query("SELECT * FROM factories WHERE business_number=:number",
+        return jdbc.query(SELECT + " WHERE f.business_number=:number",
                 Map.of("number", businessNumber), MAPPER).stream().findFirst();
     }
 
     public Optional<Factory> findExisting(String businessNumber, String factoryName, String address) {
         Optional<Factory> byNumber = findByBusinessNumber(businessNumber);
         if (byNumber.isPresent()) return byNumber;
-        return jdbc.query("SELECT * FROM factories WHERE factory_name=:name AND address=:address",
-                Map.of("name", factoryName, "address", address), MAPPER).stream().findFirst();
+        return jdbc.query(SELECT + " WHERE f.factory_name=:name AND f.address=:address",
+                new MapSqlParameterSource("name", factoryName).addValue("address", address), MAPPER).stream().findFirst();
+    }
+
+    public Optional<Factory> findByManageNo(String manageNo) {
+        if (manageNo == null || manageNo.isBlank()) return Optional.empty();
+        return jdbc.query(SELECT + " WHERE f.factory_manage_no=:number",
+                Map.of("number", manageNo.trim()), MAPPER).stream().findFirst();
     }
 
     public List<MapMarkerResponse> markers(double south, double west, double north, double east) {
+        return markers(south, west, north, east, new FactorySearchCondition(null,null,null,null,null,0,20));
+    }
+
+    public List<MapMarkerResponse> markers(double south, double west, double north, double east, FactorySearchCondition condition) {
         String sql = """
-                SELECT f.factory_id,f.factory_name,f.company_name,f.latitude,f.longitude,
-                       GROUP_CONCAT(DISTINCT p.category ORDER BY p.category SEPARATOR ',') categories
-                FROM factories f
-                LEFT JOIN factory_products fp ON fp.factory_id=f.factory_id
-                LEFT JOIN products p ON p.product_id=fp.product_id
-                WHERE f.latitude BETWEEN :south AND :north AND f.longitude BETWEEN :west AND :east
-                GROUP BY f.factory_id,f.factory_name,f.company_name,f.latitude,f.longitude
+                SELECT f.factory_id,f.factory_name,c.company_name,f.latitude,f.longitude,
+                       GROUP_CONCAT(DISTINCT cat.category_name ORDER BY cat.category_name SEPARATOR ',') categories
+                FROM factory f
+                LEFT JOIN company c ON c.company_id=f.company_id
+                LEFT JOIN region r ON r.region_id=f.region_id
+                LEFT JOIN factory_product fp ON fp.factory_id=f.factory_id
+                LEFT JOIN product p ON p.product_id=fp.product_id
+                LEFT JOIN category cat ON cat.category_id=p.category_id
+                """ + where() + """
+                AND f.latitude BETWEEN :south AND :north AND f.longitude BETWEEN :west AND :east
+                GROUP BY f.factory_id,f.factory_name,c.company_name,f.latitude,f.longitude
                 ORDER BY f.factory_id LIMIT 10000
                 """;
-        var params = new MapSqlParameterSource("south", south).addValue("west", west)
+        var params = params(condition).addValue("south", south).addValue("west", west)
                 .addValue("north", north).addValue("east", east);
         return jdbc.query(sql, params, (rs, n) -> {
             String raw = rs.getString("categories");
@@ -71,43 +91,58 @@ public class FactoryRepository {
         });
     }
 
+    @Transactional
     public long insert(FactoryRequest r) {
         String sql = """
-                INSERT INTO factories (business_number, factory_name, company_name, address, sido, sigungu,
-                  latitude, longitude, industry, established_year, factory_scale, phone)
-                VALUES (:businessNumber, :factoryName, :companyName, :address, :sido, :sigungu,
-                  :latitude, :longitude, :industry, :establishedYear, :factoryScale, :phone)
+                INSERT INTO factory (business_number, factory_name, company_id, address, region_id,
+                  latitude, longitude, industry_name, established_year, factory_scale, phone, geocoding_status)
+                VALUES (:businessNumber, :factoryName, :companyId, :address, :regionId,
+                  :latitude, :longitude, :industry, :establishedYear, :factoryScale, :phone, :geocodingStatus)
                 """;
         GeneratedKeyHolder key = new GeneratedKeyHolder();
         jdbc.update(sql, values(r), key, new String[]{"factory_id"});
         return Objects.requireNonNull(key.getKey()).longValue();
     }
 
+    @Transactional
     public int update(long id, FactoryRequest r) {
         String sql = """
-                UPDATE factories SET business_number=:businessNumber, factory_name=:factoryName,
-                  company_name=:companyName, address=:address, sido=:sido, sigungu=:sigungu,
-                  latitude=:latitude, longitude=:longitude, industry=:industry,
-                  established_year=:establishedYear, factory_scale=:factoryScale, phone=:phone
+                UPDATE factory SET business_number=:businessNumber, factory_name=:factoryName,
+                  company_id=:companyId, address=:address, region_id=:regionId,
+                  latitude=:latitude, longitude=:longitude, industry_name=:industry,
+                  established_year=:establishedYear, factory_scale=:factoryScale, phone=:phone,
+                  geocoding_status=:geocodingStatus, geocoded_at=NULL
                 WHERE factory_id=:id
                 """;
         return jdbc.update(sql, values(r).addValue("id", id));
     }
 
     public int delete(long id) {
-        return jdbc.update("DELETE FROM factories WHERE factory_id=:id", Map.of("id", id));
+        return jdbc.update("DELETE FROM factory WHERE factory_id=:id", Map.of("id", id));
+    }
+
+    public int saveGeocoding(long id, String originalAddress,
+            com.factorypick.api.service.KakaoGeocodingClient.Result result) {
+        return jdbc.update("""
+            UPDATE factory SET latitude=:latitude, longitude=:longitude, geocoding_status=:status,
+              geocoded_at=CASE WHEN :status='RESOLVED' THEN NOW() ELSE NULL END
+            WHERE factory_id=:id AND address <=> :address AND latitude IS NULL AND longitude IS NULL
+            """, new MapSqlParameterSource("id", id).addValue("address", originalAddress)
+                .addValue("latitude", result.latitude()).addValue("longitude", result.longitude())
+                .addValue("status", result.status()));
     }
 
     private String where() {
         return """
                  WHERE (:keyword='' OR f.factory_name LIKE CONCAT('%',:keyword,'%')
-                    OR f.company_name LIKE CONCAT('%',:keyword,'%') OR f.address LIKE CONCAT('%',:keyword,'%'))
-                   AND (:sido='' OR f.sido=:sido)
-                   AND (:sigungu='' OR f.sigungu=:sigungu)
-                   AND (:product='' OR EXISTS (SELECT 1 FROM factory_products fp JOIN products p ON p.product_id=fp.product_id
+                    OR c.company_name LIKE CONCAT('%',:keyword,'%') OR f.address LIKE CONCAT('%',:keyword,'%'))
+                   AND (:sido='' OR r.sido_name=:sido)
+                   AND (:sigungu='' OR r.sigungu_name=:sigungu)
+                   AND (:product='' OR EXISTS (SELECT 1 FROM factory_product fp JOIN product p ON p.product_id=fp.product_id
                        WHERE fp.factory_id=f.factory_id AND p.product_name LIKE CONCAT('%',:product,'%')))
-                   AND (:category='' OR EXISTS (SELECT 1 FROM factory_products fp JOIN products p ON p.product_id=fp.product_id
-                       WHERE fp.factory_id=f.factory_id AND p.category=:category))
+                   AND (:category='' OR EXISTS (SELECT 1 FROM factory_product fp JOIN product p ON p.product_id=fp.product_id
+                       JOIN category cat ON cat.category_id=p.category_id
+                       WHERE fp.factory_id=f.factory_id AND cat.category_name=:category))
                 """;
     }
 
@@ -119,24 +154,32 @@ public class FactoryRepository {
     }
 
     private MapSqlParameterSource values(FactoryRequest r) {
+        if (!r.isCoordinatePairValid()) throw new IllegalArgumentException("위도와 경도는 함께 입력해야 합니다.");
         return new MapSqlParameterSource()
                 .addValue("businessNumber", cleanNull(r.businessNumber())).addValue("factoryName", r.factoryName().trim())
-                .addValue("companyName", r.companyName().trim()).addValue("address", r.address().trim())
-                .addValue("sido", r.sido().trim()).addValue("sigungu", cleanNull(r.sigungu()))
+                .addValue("companyId", references.company(r.companyName())).addValue("address", cleanNull(r.address()))
+                .addValue("regionId", references.region(r.sido(), r.sigungu()))
                 .addValue("latitude", r.latitude()).addValue("longitude", r.longitude())
                 .addValue("industry", cleanNull(r.industry())).addValue("establishedYear", r.establishedYear())
-                .addValue("factoryScale", cleanNull(r.factoryScale())).addValue("phone", cleanNull(r.phone()));
+                .addValue("factoryScale", cleanNull(r.factoryScale())).addValue("phone", cleanNull(r.phone()))
+                .addValue("geocodingStatus", r.latitude() == null ? "PENDING" : "RESOLVED");
     }
 
     private static String clean(String s) { return s == null ? "" : s.trim(); }
     private static String cleanNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }
 
-    private static Factory map(ResultSet rs) throws SQLException {
-        Integer year = (Integer) rs.getObject("established_year");
+    static Factory map(ResultSet rs) throws SQLException {
+        Integer year = rs.getObject("established_year", Integer.class);
         return new Factory(rs.getLong("factory_id"), rs.getString("business_number"), rs.getString("factory_name"),
                 rs.getString("company_name"), rs.getString("address"), rs.getString("sido"), rs.getString("sigungu"),
                 rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"), rs.getString("industry"), year,
                 rs.getString("factory_scale"), rs.getString("phone"),
-                rs.getTimestamp("created_at").toLocalDateTime(), rs.getTimestamp("updated_at").toLocalDateTime());
+                rs.getTimestamp("created_at").toLocalDateTime(), rs.getTimestamp("updated_at").toLocalDateTime(),
+                rs.getString("factory_manage_no"), rs.getString("representative_name"),
+                rs.getString("managing_agency_name"), rs.getString("fax_number"),
+                rs.getObject("employee_count", Integer.class), rs.getObject("first_registered_date", java.time.LocalDate.class),
+                rs.getString("primary_industry_code"), rs.getString("main_product_text"), rs.getString("homepage_raw"),
+                rs.getString("industrial_complex_name"), rs.getString("geocoding_status"),
+                rs.getObject("geocoded_at", java.time.LocalDateTime.class), rs.getObject("last_synced_at", java.time.LocalDateTime.class));
     }
 }
