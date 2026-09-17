@@ -32,6 +32,24 @@ class NormalizedDatabaseTest {
     @Autowired DataImportService imports;
     @Autowired JdbcTemplate jdbc;
 
+    @Test void publicApiReimportPreservesManualFieldsAndCoordinates() {
+        var original = new FactoryRequest("1234567890", "original", "company", "original address",
+                null, null, new BigDecimal("37.5"), new BigDecimal("127.1"),
+                "industry", 2000, "large", "02-1234");
+        long id = factoryRepository.saveFromPublicApi(original, "test-manage-001");
+        var incoming = new FactoryRequest(null, "updated", "company", "different address",
+                null, null, null, null, null, null, null, null);
+        assertThat(factoryRepository.saveFromPublicApi(incoming, "test-manage-001")).isEqualTo(id);
+        var saved = factoryRepository.findById(id).orElseThrow();
+        assertThat(saved.factoryName()).isEqualTo("updated");
+        assertThat(saved.businessNumber()).isEqualTo("1234567890");
+        assertThat(saved.factoryScale()).isEqualTo("large");
+        assertThat(saved.address()).isEqualTo("original address");
+        assertThat(saved.latitude()).isEqualByComparingTo("37.5");
+        assertThat(saved.longitude()).isEqualByComparingTo("127.1");
+        assertThat(saved.phone()).isEqualTo("02-1234");
+    }
+
     @Test void geocodingPersistsOnlyForTheAddressThatWasLookedUp() {
         var f = factories.create(new FactoryRequest(null, "geocode", null, "original address", null, null,
                 null, null, null, null, null, null), List.of()).factory();

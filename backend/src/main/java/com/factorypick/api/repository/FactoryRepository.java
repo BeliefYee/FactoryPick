@@ -103,6 +103,7 @@ public class FactoryRepository {
         jdbc.update(sql, values(r), key, new String[]{"factory_id"});
         return Objects.requireNonNull(key.getKey()).longValue();
     }
+
 public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
     return jdbc.update("""
         UPDATE factory
@@ -117,6 +118,43 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
                             : factoryManageNo.trim())
     );
 }
+
+    @Transactional
+    public long saveFromPublicApi(FactoryRequest request, String manageNo) {
+        if (manageNo == null || manageNo.isBlank()) {
+            throw new IllegalArgumentException("Factory management number is required.");
+        }
+        var existing = findByManageNo(manageNo);
+        long id;
+        if (existing.isPresent()) {
+            id = existing.get().factoryId();
+            updateFromPublicApi(id, request);
+        } else {
+            id = insert(request);
+        }
+        if (saveFactoryManageNo(id, manageNo) != 1) {
+            throw new IllegalStateException("Factory management number could not be saved.");
+        }
+        return id;
+    }
+
+    @Transactional
+    public int updateFromPublicApi(long id, FactoryRequest r) {
+        // Preserve manually maintained fields, address and geocoded coordinates.
+        return jdbc.update("""
+                UPDATE factory SET factory_name=:name,
+                  company_id=COALESCE(:companyId, company_id),
+                  industry_name=COALESCE(:industry, industry_name),
+                  established_year=COALESCE(:year, established_year),
+                  phone=COALESCE(:phone, phone)
+                WHERE factory_id=:id
+                """, new MapSqlParameterSource("id", id)
+                .addValue("name", r.factoryName().trim())
+                .addValue("companyId", references.company(r.companyName()))
+                .addValue("industry", cleanNull(r.industry()))
+                .addValue("year", r.establishedYear())
+                .addValue("phone", cleanNull(r.phone())));
+    }
 
     @Transactional
     public int update(long id, FactoryRequest r) {

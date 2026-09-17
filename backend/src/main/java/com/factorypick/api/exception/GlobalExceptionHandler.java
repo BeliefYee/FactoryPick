@@ -51,7 +51,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> unknown(Exception e, HttpServletRequest request) {
-        e.printStackTrace();
         return response(HttpStatus.INTERNAL_SERVER_ERROR, "서버 처리 중 오류가 발생했습니다.", request, Map.of());
     }
 

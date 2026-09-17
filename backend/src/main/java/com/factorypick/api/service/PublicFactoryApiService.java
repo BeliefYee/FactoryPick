@@ -16,21 +16,29 @@ public class PublicFactoryApiService {
     private final FactoryRepository factoryRepository;
     private final FactoryGeocodingService geocodingService;
     private final RestClient restClient;
+    @Value("${factorypick.public-data.success-code:00}")
+    private String successCode;
 
-    @Value("${DATA_GO_KR_SERVICE_KEY}")
+    @Value("${factorypick.public-data.service-key:}")
     private String serviceKey;
 
     public PublicFactoryApiService(
             FactoryRepository factoryRepository,
-            FactoryGeocodingService geocodingService
+            FactoryGeocodingService geocodingService, RestClient.Builder builder
     ) {
         this.factoryRepository = factoryRepository;
         this.geocodingService = geocodingService;
-        this.restClient = RestClient.builder().build();
+        this.restClient = builder.build();
     }
 
     public void importFactories(String industrialComplexName) {
 
+        if (industrialComplexName == null || industrialComplexName.isBlank()) {
+            throw new IllegalArgumentException("Industrial complex name is required.");
+        }
+        if (serviceKey == null || serviceKey.isBlank()) {
+            throw new IllegalStateException("Public API service key is not configured.");
+        }
         int pageNo = 1;
         int numOfRows = 100;
 
@@ -40,13 +48,13 @@ public class PublicFactoryApiService {
                     .fromHttpUrl(
                             "https://apis.data.go.kr/B550624/fctryRegistInfo/getFctryListInIrsttService_v2"
                     )
-                    .queryParam("serviceKey", serviceKey)
+                    .queryParam("serviceKey", "{serviceKey}")
                     .queryParam("pageNo", pageNo)
                     .queryParam("numOfRows", numOfRows)
                     .queryParam("irsttNm", industrialComplexName)
                     .queryParam("type", "JSON")
-                    .build()
                     .encode()
+                    .buildAndExpand(decodedServiceKey())
                     .toUri();
 
             PublicFactoryApiResponse response = restClient.get()
@@ -54,11 +62,22 @@ public class PublicFactoryApiService {
                     .retrieve()
                     .body(PublicFactoryApiResponse.class);
 
+            if (response == null || response.header() == null) {
+                throw new IllegalStateException("Invalid public API response.");
+            }
+            if (!successCode.equals(response.header().resultCode())) {
+                throw new IllegalStateException("Public API returned an error code.");
+            }
+            if (response.body() == null) {
+                throw new IllegalStateException("Public API response body is missing.");
+            }
             if (response.body().items() == null
-               || response.body().items().item() == null
-               || response.body().items().item().isEmpty()) {
-                break;
+                    || response.body().items().item() == null
+                    || response.body().items().item().isEmpty()) {
+                if (response.body().totalCount() > (long) (pageNo - 1) * numOfRows) {
+                    throw new IllegalStateException("Public API returned an incomplete page.");
                 }
+                break;
             }
 
             for (PublicFactoryApiResponse.Item item :
@@ -77,8 +96,9 @@ public class PublicFactoryApiService {
 
     private void saveFactory(PublicFactoryApiResponse.Item item) {
 
-        if (item.cmpnyNm() == null || item.cmpnyNm().isBlank()) {
-            return;
+        if (item.cmpnyNm() == null || item.cmpnyNm().isBlank()
+                || item.fctryManageNo() == null || item.fctryManageNo().isBlank()) {
+            throw new IllegalStateException("Public API item is missing its name or management number.");
         }
 
         String factoryName = item.cmpnyNm();
@@ -98,30 +118,7 @@ public class PublicFactoryApiService {
                 item.cmpnyTelno()
         );
 
-        var existing =
-                factoryRepository.findByManageNo(item.fctryManageNo());
-
-        long factoryId;
-
-        if (existing.isPresent()) {
-
-            factoryId = existing.get().factoryId();
-
-            factoryRepository.updateFromPublicApi(
-                    factoryId,
-                    request
-            );
-
-        } else {
-
-            factoryId =
-                    factoryRepository.insert(request);
-        }
-
-        factoryRepository.saveFactoryManageNo(
-                factoryId,
-                item.fctryManageNo()
-        );
+        long factoryId = factoryRepository.saveFromPublicApi(request, item.fctryManageNo());
 
         if (item.rnAdres() != null
                 && !item.rnAdres().isBlank()) {
@@ -131,6 +128,12 @@ public class PublicFactoryApiService {
             } catch (Exception ignored) {
             }
         }
+    }
+
+    private String decodedServiceKey() {
+        return serviceKey.contains("%")
+                ? java.net.URLDecoder.decode(serviceKey, java.nio.charset.StandardCharsets.UTF_8)
+                : serviceKey;
     }
 
     private Integer getYear(String value) {
