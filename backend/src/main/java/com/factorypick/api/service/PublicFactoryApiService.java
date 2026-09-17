@@ -54,12 +54,11 @@ public class PublicFactoryApiService {
                     .retrieve()
                     .body(PublicFactoryApiResponse.class);
 
-            if (response == null
-                    || response.body() == null
-                    || response.body().items() == null
-                    || response.body().items().item() == null
-                    || response.body().items().item().isEmpty()) {
+            if (response.body().items() == null
+               || response.body().items().item() == null
+               || response.body().items().item().isEmpty()) {
                 break;
+                }
             }
 
             for (PublicFactoryApiResponse.Item item :
@@ -108,7 +107,7 @@ public class PublicFactoryApiService {
 
             factoryId = existing.get().factoryId();
 
-            factoryRepository.update(
+            factoryRepository.updateFromPublicApi(
                     factoryId,
                     request
             );

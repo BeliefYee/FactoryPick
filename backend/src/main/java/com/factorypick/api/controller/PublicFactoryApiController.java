@@ -13,12 +13,5 @@ public class PublicFactoryApiController {
         this.service = service;
     }
 
-    @GetMapping("/import")
-    public String importFactories(
-            @RequestParam String industrialComplexName) {
-
-        service.importFactories(industrialComplexName);
-
-        return "공장 데이터 가져오기 완료: " + industrialComplexName;
-    }
+    
 }
