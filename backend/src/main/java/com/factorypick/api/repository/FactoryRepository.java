@@ -103,6 +103,20 @@ public class FactoryRepository {
         jdbc.update(sql, values(r), key, new String[]{"factory_id"});
         return Objects.requireNonNull(key.getKey()).longValue();
     }
+public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
+    return jdbc.update("""
+        UPDATE factory
+        SET factory_manage_no = :factoryManageNo
+        WHERE factory_id = :factoryId
+        """,
+        new MapSqlParameterSource()
+            .addValue("factoryId", factoryId)
+            .addValue("factoryManageNo",
+                    factoryManageNo == null || factoryManageNo.isBlank()
+                            ? null
+                            : factoryManageNo.trim())
+    );
+}
 
     @Transactional
     public int update(long id, FactoryRequest r) {
