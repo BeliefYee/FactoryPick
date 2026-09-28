@@ -6,6 +6,8 @@ import com.factorypick.api.repository.FactoryRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -19,7 +21,7 @@ public class PublicFactoryApiService {
     private final FactoryGeocodingService geocodingService;
     private final RestClient restClient;
 
-    @Value("${factorypick.public-data.service-key:}")
+    @Value("${factorypick.public-data.service-key:${DATA_GO_KR_SERVICE_KEY:}}")
     private String serviceKey;
 
     public PublicFactoryApiService(
@@ -61,8 +63,8 @@ public class PublicFactoryApiService {
                     .body(PublicFactoryApiResponse.class);
 
             if (response.body().items() == null
-               || response.body().items().item() == null
-               || response.body().items().item().isEmpty()) {
+                    || response.body().items().item() == null
+                    || response.body().items().item().isEmpty()) {
                 break;
             }
 

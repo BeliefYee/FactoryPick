@@ -149,7 +149,20 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
         return jdbc.update("""
                 UPDATE factory SET primary_industry_code=COALESCE(:code,primary_industry_code)
                 WHERE factory_id=:id
-                """, new MapSqlParameterSource("id", id).addValue("code", cleanNull(code)));
+                """, new MapSqlParameterSource("id", id).addValue("code", cleanNull(code)));}
+    @Transactional
+    public int updateFromPublicApi(long id, FactoryRequest r) {
+        String sql = """
+                UPDATE factory SET factory_name=:factoryName, company_id=:companyId,
+                  latitude=CASE WHEN address <=> :address THEN latitude ELSE NULL END,
+                  longitude=CASE WHEN address <=> :address THEN longitude ELSE NULL END,
+                  geocoding_status=CASE WHEN address <=> :address THEN geocoding_status ELSE 'PENDING' END,
+                  geocoded_at=CASE WHEN address <=> :address THEN geocoded_at ELSE NULL END,
+                  address=:address, region_id=:regionId, industry_name=:industry,
+                  established_year=:establishedYear, phone=:phone
+                WHERE factory_id=:id
+                """;
+        return jdbc.update(sql, values(r).addValue("id", id));
     }
 
     public int delete(long id) {
