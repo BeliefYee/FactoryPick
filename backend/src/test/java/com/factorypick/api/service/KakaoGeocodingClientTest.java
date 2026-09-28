@@ -38,7 +38,49 @@ class KakaoGeocodingClientTest {
         var builder = RestClient.builder().baseUrl("https://dapi.kakao.com");
         var server = MockRestServiceServer.bindTo(builder).build();
         server.expect(anything()).andRespond(withUnauthorizedRequest());
-        assertThat(new KakaoGeocodingClient(builder.build(), "secret").lookup("address").status()).isEqualTo("FAILED");
+        assertThatThrownBy(() -> new KakaoGeocodingClient(builder.build(), "secret").lookup("address"))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("503").hasMessageNotContaining("secret");
+    }
+
+    @Test void retriesOnlyTheCompleteRoadAddressAfterNoResults() {
+        var builder = RestClient.builder().baseUrl("https://dapi.kakao.com");
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(queryParam("query", org.springframework.web.util.UriUtils.encode(
+                        "경기도 시흥시 공단1대로379번길 31,시화단지 4나 102호 (정왕동)", java.nio.charset.StandardCharsets.UTF_8)))
+                .andRespond(withSuccess("{\"meta\":{\"total_count\":0},\"documents\":[]}", MediaType.APPLICATION_JSON));
+        server.expect(queryParam("query", org.springframework.web.util.UriUtils.encode(
+                        "경기도 시흥시 공단1대로379번길 31", java.nio.charset.StandardCharsets.UTF_8)))
+                .andExpect(queryParam("analyze_type", "exact"))
+                .andRespond(withSuccess("""
+                    {"meta":{"total_count":1},"documents":[{"address_type":"ROAD_ADDR","x":"126.74","y":"37.33"}]}
+                    """, MediaType.APPLICATION_JSON));
+        assertThat(new KakaoGeocodingClient(builder.build(), "test-key")
+                .lookup("경기도 시흥시 공단1대로379번길 31,시화단지 4나 102호 (정왕동)").status()).isEqualTo("RESOLVED");
+        server.verify();
+    }
+
+    @Test void addressCleanupDoesNotGuessMissingBuildingNumbersOrLotAddresses() {
+        assertThat(KakaoGeocodingClient.roadAddress("서울특별시 송파구 올림픽로 (잠실동)"))
+                .isEqualTo("서울특별시 송파구 올림픽로 (잠실동)");
+        assertThat(KakaoGeocodingClient.roadAddress("경기도 시흥시 정왕동 123-4 (공장)"))
+                .isEqualTo("경기도 시흥시 정왕동 123-4 (공장)");
+        assertThat(KakaoGeocodingClient.roadAddress("서울특별시 송파구 올림픽로 300 (신천동)"))
+                .isEqualTo("서울특별시 송파구 올림픽로 300");
+    }
+
+    @Test void ambiguousOriginalAddressIsNotRetriedWithLessDetail() {
+        assertThat(client("{\"meta\":{\"total_count\":2},\"documents\":[{},{}]}")
+                .lookup("서울특별시 송파구 올림픽로 300, 2층").status()).isEqualTo("REVIEW");
+    }
+
+    @Test void providerRateLimitStopsRetriesWithoutExposingCredentials() {
+        var builder = RestClient.builder().baseUrl("https://dapi.kakao.com");
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(anything()).andRespond(withStatus(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS));
+        assertThatThrownBy(() -> new KakaoGeocodingClient(builder.build(), "secret")
+                .lookup("서울특별시 송파구 올림픽로 300, 2층"))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("503").hasMessageNotContaining("secret");
+        server.verify();
     }
     @Test void missingKeyDoesNotMakeAnExternalRequest() {
         assertThatThrownBy(() -> new KakaoGeocodingClient(RestClient.create(), "").lookup("address"))

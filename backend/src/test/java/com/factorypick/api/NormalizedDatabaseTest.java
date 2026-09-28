@@ -73,10 +73,51 @@ class NormalizedDatabaseTest {
         assertThat(product.category()).isNull();
         factories.update(factory.factoryId(), request, List.of(product.productId()));
         assertThat(statistics.byRegion()).contains(new StatisticsResponse("미분류", 1));
-        assertThat(statistics.byCategory()).contains(new StatisticsResponse("미분류", 1));
+        assertThat(statistics.byCategory()).contains(new StatisticsResponse("전자·반도체", 1));
         assertThat(products.search("반도체", null, 0, 20).totalElements()).isEqualTo(1);
         factories.delete(factory.factoryId());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM factory_industry WHERE factory_id=?", Long.class, factory.factoryId())).isZero();
+    }
+
+    @Test void industryCategoriesWorkWithoutProductsAndStayInSyncWithExistingProductCategories() {
+        var factory = factories.create(request("INDUSTRY-1", "metal works", null, null, null), List.of()).factory();
+        factoryRepository.savePrimaryIndustryCode(factory.factoryId(), "25999");
+        assertThat(factoryRepository.categories()).contains("금속·철강").doesNotContain("통신");
+        assertThat(factories.detail(factory.factoryId()).categories()).containsExactly("금속·철강");
+        assertThat(factories.search(null,null,null,null,"금속·철강",0,20).content())
+                .extracting(com.factorypick.api.domain.Factory::factoryId).containsExactly(factory.factoryId());
+        assertThat(factoryRepository.markers(37,127,38,128,
+                new FactorySearchCondition(null,null,null,null,"금속·철강",0,20)))
+                .singleElement().satisfies(m -> assertThat(m.categories()).containsExactly("금속·철강"));
+        assertThat(statistics.byCategory()).contains(new StatisticsResponse("금속·철강",1));
+
+        var product = products.create(new ProductRequest("metal part", "금속·철강", null));
+        var second = products.create(new ProductRequest("special part", "custom category", null));
+        factories.update(factory.factoryId(), request("INDUSTRY-1","metal works",null,null,null),
+                List.of(product.productId(),second.productId()));
+        assertThat(factories.detail(factory.factoryId()).categories()).containsExactlyInAnyOrder("금속·철강","custom category");
+        assertThat(statistics.byCategory()).contains(new StatisticsResponse("금속·철강",1));
+        assertThat(products.search(null,"금속·철강",0,20).content()).hasSize(2);
+        factoryRepository.savePrimaryIndustryCode(factory.factoryId(), " ");
+        assertThat(factories.detail(factory.factoryId()).factory().primaryIndustryCode()).isEqualTo("25999");
+
+        factoryRepository.savePrimaryIndustryCode(factory.factoryId(), "58222");
+        assertThat(factories.detail(factory.factoryId()).categories()).contains("소프트웨어·정보서비스");
+        factoryRepository.savePrimaryIndustryCode(factory.factoryId(), "58111");
+        assertThat(factories.detail(factory.factoryId()).categories()).contains("인쇄·출판").doesNotContain("소프트웨어·정보서비스");
+    }
+
+    @Test void mapReturnsAllFactoriesInTheViewportForClustering() {
+        jdbc.batchUpdate("INSERT INTO factory(factory_name,address,latitude,longitude) VALUES (?,'서울특별시 금천구 디지털로9길 33, 502호',37.5,127.5)",
+                java.util.stream.IntStream.range(0,10001)
+                        .mapToObj(i -> new Object[]{"cluster-test-" + i}).toList());
+        var markers = factoryRepository.markers(37,127,38,128,
+                new FactorySearchCondition("cluster-test-",null,null,null,null,0,20));
+        assertThat(markers).hasSize(10001);
+        assertThat(markers).extracting(MapMarkerResponse::factoryId).doesNotHaveDuplicates();
+        assertThat(markers).allSatisfy(marker -> assertThat(marker.address()).isEqualTo("서울특별시 금천구 디지털로9길 33, 502호"));
+        assertThat(factoryRepository.markers(33,124,34,125,
+                new FactorySearchCondition("cluster-test-",null,null,null,null,0,20))).isEmpty();
     }
 
     @Test void databaseRejectsDuplicateManageNumbersAndPartialCoordinates() {

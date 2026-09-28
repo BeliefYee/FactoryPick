@@ -68,25 +68,24 @@ public class FactoryRepository {
 
     public List<MapMarkerResponse> markers(double south, double west, double north, double east, FactorySearchCondition condition) {
         String sql = """
-                SELECT f.factory_id,f.factory_name,c.company_name,f.latitude,f.longitude,
+                SELECT f.factory_id,f.factory_name,c.company_name,f.address,f.latitude,f.longitude,
                        GROUP_CONCAT(DISTINCT cat.category_name ORDER BY cat.category_name SEPARATOR ',') categories
                 FROM factory f
                 LEFT JOIN company c ON c.company_id=f.company_id
                 LEFT JOIN region r ON r.region_id=f.region_id
-                LEFT JOIN factory_product fp ON fp.factory_id=f.factory_id
-                LEFT JOIN product p ON p.product_id=fp.product_id
-                LEFT JOIN category cat ON cat.category_id=p.category_id
+                LEFT JOIN factory_category fc ON fc.factory_id=f.factory_id
+                LEFT JOIN category cat ON cat.category_id=fc.category_id
                 """ + where() + """
                 AND f.latitude BETWEEN :south AND :north AND f.longitude BETWEEN :west AND :east
-                GROUP BY f.factory_id,f.factory_name,c.company_name,f.latitude,f.longitude
-                ORDER BY f.factory_id LIMIT 10000
+                GROUP BY f.factory_id,f.factory_name,c.company_name,f.address,f.latitude,f.longitude
+                ORDER BY f.factory_id
                 """;
         var params = params(condition).addValue("south", south).addValue("west", west)
                 .addValue("north", north).addValue("east", east);
         return jdbc.query(sql, params, (rs, n) -> {
             String raw = rs.getString("categories");
             return new MapMarkerResponse(rs.getLong("factory_id"), rs.getString("factory_name"),
-                    rs.getString("company_name"), rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"),
+                    rs.getString("company_name"), rs.getString("address"), rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"),
                     raw == null || raw.isBlank() ? List.of() : Arrays.asList(raw.split(",")));
         });
     }
@@ -131,6 +130,28 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
         return jdbc.update(sql, values(r).addValue("id", id));
     }
 
+    public List<String> categories() {
+        return jdbc.queryForList("""
+                SELECT DISTINCT c.category_name FROM factory_category fc
+                JOIN category c ON c.category_id=fc.category_id ORDER BY c.category_name
+                """, Map.of(), String.class);
+    }
+
+    public List<String> categoriesForFactory(long id) {
+        return jdbc.queryForList("""
+                SELECT c.category_name FROM factory_category fc
+                JOIN category c ON c.category_id=fc.category_id
+                WHERE fc.factory_id=:id ORDER BY c.category_name
+                """, Map.of("id", id), String.class);
+    }
+
+    public int savePrimaryIndustryCode(long id, String code) {
+        return jdbc.update("""
+                UPDATE factory SET primary_industry_code=COALESCE(:code,primary_industry_code)
+                WHERE factory_id=:id
+                """, new MapSqlParameterSource("id", id).addValue("code", cleanNull(code)));
+    }
+
     public int delete(long id) {
         return jdbc.update("DELETE FROM factory WHERE factory_id=:id", Map.of("id", id));
     }
@@ -154,9 +175,9 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
                    AND (:sigungu='' OR r.sigungu_name=:sigungu)
                    AND (:product='' OR EXISTS (SELECT 1 FROM factory_product fp JOIN product p ON p.product_id=fp.product_id
                        WHERE fp.factory_id=f.factory_id AND p.product_name LIKE CONCAT('%',:product,'%')))
-                   AND (:category='' OR EXISTS (SELECT 1 FROM factory_product fp JOIN product p ON p.product_id=fp.product_id
-                       JOIN category cat ON cat.category_id=p.category_id
-                       WHERE fp.factory_id=f.factory_id AND cat.category_name=:category))
+                   AND (:category='' OR EXISTS (SELECT 1 FROM factory_category fc
+                       JOIN category cat ON cat.category_id=fc.category_id
+                       WHERE fc.factory_id=f.factory_id AND cat.category_name=:category))
                 """;
     }
 

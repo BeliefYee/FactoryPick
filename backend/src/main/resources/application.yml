@@ -12,6 +12,7 @@ spring:
     init:
       mode: ${DB_INIT_MODE:always}
       encoding: UTF-8
+      schema-locations: classpath:schema.sql,classpath:category-schema.sql
   servlet:
     multipart:
       max-file-size: 20MB
@@ -30,6 +31,6 @@ factorypick:
     token-hours: ${ADMIN_TOKEN_HOURS:8}
   public-data:
     base-url: https://apis.data.go.kr/B550624/fctryRegistInfo
-    service-key: ${DATA_GO_KR_SERVICE_KEY}
+    service-key: ${DATA_GO_KR_SERVICE_KEY:}
     page-size: ${DATA_GO_KR_PAGE_SIZE:100}
     response-type: json

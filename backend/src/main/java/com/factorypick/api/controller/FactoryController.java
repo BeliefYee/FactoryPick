@@ -51,6 +51,11 @@ public class FactoryController {
         );
     }
 
+    @GetMapping("/categories")
+    public List<String> categories() {
+        return repository.categories();
+    }
+
     @GetMapping("/{id}")
     public FactoryDetailResponse detail(
             @PathVariable long id

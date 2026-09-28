@@ -6,6 +6,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import java.math.BigDecimal;
@@ -34,6 +35,24 @@ public class KakaoGeocodingClient {
         if (key.isBlank()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                 "backend/.env에 KAKAO_REST_API_KEY를 설정해 주세요.");
         if (address == null || address.isBlank()) return new Result("REVIEW", null, null);
+        Result result = lookupExact(address.trim());
+        String roadAddress = roadAddress(address);
+        if (result.status().equals("NOT_FOUND") && !roadAddress.equals(address.trim())) {
+            return lookupExact(roadAddress);
+        }
+        return result;
+    }
+
+    /** Remove unit/complex annotations only when a complete road name and building number remain. */
+    public static String roadAddress(String address) {
+        if (address == null) return "";
+        String original = address.trim();
+        String candidate = original.replaceAll("\\([^)]*\\)", " ").split(",", 2)[0]
+                .replaceAll("\\s+", " ").trim();
+        return candidate.matches(".+(?:대로|로|길)\\s+\\d+(?:-\\d+)?") ? candidate : original;
+    }
+
+    private Result lookupExact(String address) {
         try {
             JsonNode body = client.get().uri(uri -> uri.path("/v2/local/search/address.json")
                     .queryParam("query", "{address}").queryParam("analyze_type", "exact")
@@ -54,6 +73,13 @@ public class KakaoGeocodingClient {
                     || longitude.compareTo(BigDecimal.valueOf(124)) < 0 || longitude.compareTo(BigDecimal.valueOf(132)) > 0)
                 return new Result("REVIEW", null, null);
             return new Result("RESOLVED", latitude, longitude);
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            if (status == 401 || status == 403 || status == 429) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "카카오 주소 조회가 중단되었습니다. 인증키, 사용 권한 및 호출 한도를 확인해 주세요.");
+            }
+            return new Result("FAILED", null, null);
         } catch (RestClientException | NumberFormatException e) {
             // Do not expose provider request headers or credentials in API errors.
             return new Result("FAILED", null, null);

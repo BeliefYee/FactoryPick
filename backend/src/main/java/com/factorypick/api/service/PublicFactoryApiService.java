@@ -4,8 +4,10 @@ import com.factorypick.api.dto.FactoryRequest;
 import com.factorypick.api.dto.PublicFactoryApiResponse;
 import com.factorypick.api.repository.FactoryRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
@@ -17,7 +19,7 @@ public class PublicFactoryApiService {
     private final FactoryGeocodingService geocodingService;
     private final RestClient restClient;
 
-    @Value("${DATA_GO_KR_SERVICE_KEY}")
+    @Value("${factorypick.public-data.service-key:}")
     private String serviceKey;
 
     public PublicFactoryApiService(
@@ -30,6 +32,10 @@ public class PublicFactoryApiService {
     }
 
     public void importFactories(String industrialComplexName) {
+        if (serviceKey == null || serviceKey.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "backend/.env에 DATA_GO_KR_SERVICE_KEY를 설정해 주세요.");
+        }
 
         int pageNo = 1;
         int numOfRows = 100;
@@ -58,7 +64,6 @@ public class PublicFactoryApiService {
                || response.body().items().item() == null
                || response.body().items().item().isEmpty()) {
                 break;
-                }
             }
 
             for (PublicFactoryApiResponse.Item item :
@@ -78,6 +83,10 @@ public class PublicFactoryApiService {
     private void saveFactory(PublicFactoryApiResponse.Item item) {
 
         if (item.cmpnyNm() == null || item.cmpnyNm().isBlank()) {
+            return;
+        }
+
+        if (item.rnAdres() == null || item.rnAdres().isBlank()) {
             return;
         }
 
@@ -107,7 +116,7 @@ public class PublicFactoryApiService {
 
             factoryId = existing.get().factoryId();
 
-            factoryRepository.updateFromPublicApi(
+            factoryRepository.update(
                     factoryId,
                     request
             );
@@ -122,14 +131,11 @@ public class PublicFactoryApiService {
                 factoryId,
                 item.fctryManageNo()
         );
+        factoryRepository.savePrimaryIndustryCode(factoryId, item.rprsntvIndutyCode());
 
-        if (item.rnAdres() != null
-                && !item.rnAdres().isBlank()) {
-
-            try {
-                geocodingService.geocode(factoryId);
-            } catch (Exception ignored) {
-            }
+        try {
+            geocodingService.geocode(factoryId);
+        } catch (Exception ignored) {
         }
     }
 
