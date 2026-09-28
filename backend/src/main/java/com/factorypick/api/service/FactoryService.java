@@ -25,7 +25,7 @@ public class FactoryService {
 
     public FactoryDetailResponse detail(long id) {
         Factory factory = factories.findById(id).orElseThrow(() -> new NotFoundException("공장을 찾을 수 없습니다."));
-        return new FactoryDetailResponse(factory, products.findByFactoryId(id));
+        return new FactoryDetailResponse(factory, products.findByFactoryId(id), factories.categoriesForFactory(id));
     }
 
     @Transactional

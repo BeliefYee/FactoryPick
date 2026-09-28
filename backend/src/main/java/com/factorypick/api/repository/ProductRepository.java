@@ -92,7 +92,13 @@ public class ProductRepository {
     }
 
     private String where() {
-        return "WHERE (:keyword='' OR p.product_name LIKE CONCAT('%',:keyword,'%')) AND (:category='' OR c.category_name=:category)";
+        return """
+                WHERE (:keyword='' OR p.product_name LIKE CONCAT('%',:keyword,'%'))
+                  AND (:category='' OR c.category_name=:category OR EXISTS (
+                    SELECT 1 FROM factory_product fp JOIN factory_category fc ON fc.factory_id=fp.factory_id
+                    JOIN category cat ON cat.category_id=fc.category_id
+                    WHERE fp.product_id=p.product_id AND cat.category_name=:category))
+                """;
     }
     private MapSqlParameterSource params(String keyword, String category) {
         return new MapSqlParameterSource("keyword", clean(keyword)).addValue("category", clean(category));

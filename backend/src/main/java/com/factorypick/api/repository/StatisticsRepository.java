@@ -15,9 +15,10 @@ public class StatisticsRepository {
     }
     public List<StatisticsResponse> byCategory() {
         return query("""
-                SELECT COALESCE(c.category_name,'미분류') label, COUNT(DISTINCT fp.factory_id) count FROM product p
-                LEFT JOIN category c ON c.category_id=p.category_id
-                JOIN factory_product fp ON fp.product_id=p.product_id GROUP BY c.category_id,c.category_name ORDER BY count DESC
+                SELECT COALESCE(c.category_name,'미분류') label, COUNT(DISTINCT f.factory_id) count FROM factory f
+                LEFT JOIN factory_category fc ON fc.factory_id=f.factory_id
+                LEFT JOIN category c ON c.category_id=fc.category_id
+                GROUP BY c.category_id,c.category_name ORDER BY count DESC, label
                 """);
     }
     public List<StatisticsResponse> byProduct() {

@@ -7,6 +7,10 @@ plugins {
 group = 'com.factorypick'
 version = '0.0.1-SNAPSHOT'
 
+springBoot {
+    mainClass = 'com.factorypick.api.FactoryPickApplication'
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -37,6 +41,13 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register('retryGeocoding', JavaExec) {
+    description = 'Retry NOT_FOUND factory addresses, backing up changes and reporting progress.'
+    group = 'application'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.factorypick.api.tools.RetryGeocoding'
 }
 
 tasks.withType(JavaCompile).configureEach {

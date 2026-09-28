@@ -49,11 +49,11 @@ export function DeleteDialog({ target, token, onClose, onDeleted }) {
   return <Modal title="데이터 삭제" onClose={() => !busy && onClose()}><p><strong>{target.name}</strong>을 삭제하시겠습니까?</p><p className="muted">연결된 생산 관계도 해제됩니다. 이 작업은 되돌릴 수 없습니다.</p>{error && <p className="notice error">{error}</p>}<div className="action-row"><button disabled={busy} onClick={onClose}>취소</button><button className="danger" disabled={busy} onClick={remove}>{busy ? '삭제 중…' : '삭제'}</button></div></Modal>
 }
 
-export default function Management({ token, onLogin, revision, onRefresh, onFactory, onProduct, onCreate, onEditFactory, onEditProduct, onDelete }) {
+export default function Management({ token, revision, onRefresh, onFactory, onProduct, onCreate, onEditFactory, onEditProduct, onDelete }) {
   const [tab,setTab] = useState('factories'), [search,setSearch] = useState(''), [page,setPage] = useState(0)
   const [busy,setBusy] = useState(false), [result,setResult] = useState(null), [error,setError] = useState('')
   const resource = useResource(token ? tab === 'imports' ? '/admin/data/imports' : `/admin/${tab}?${queryString({ keyword:search,page,size:15 })}` : null, revision, token)
-  if (!token) return <section className="panel auth-gate"><Icon name="data" size={42} /><h2>데이터 관리</h2><p>관리자 로그인 후 공장·제품을 관리하고 CSV 데이터를 등록할 수 있습니다.</p><button className="primary" onClick={onLogin}>관리자 로그인</button></section>
+  if (!token) return null
   const upload = async e => {
     e.preventDefault(); setBusy(true); setError(''); setResult(null)
     const body = new FormData(e.currentTarget)

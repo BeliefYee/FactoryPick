@@ -4,10 +4,12 @@ import com.factorypick.api.dto.FactoryRequest;
 import com.factorypick.api.dto.PublicFactoryApiResponse;
 import com.factorypick.api.repository.FactoryRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
@@ -86,6 +88,10 @@ public class PublicFactoryApiService {
             return;
         }
 
+        if (item.rnAdres() == null || item.rnAdres().isBlank()) {
+            return;
+        }
+
         String factoryName = item.cmpnyNm();
 
         FactoryRequest request = new FactoryRequest(
@@ -112,7 +118,7 @@ public class PublicFactoryApiService {
 
             factoryId = existing.get().factoryId();
 
-            factoryRepository.updateFromPublicApi(
+            factoryRepository.update(
                     factoryId,
                     request
             );
@@ -127,14 +133,11 @@ public class PublicFactoryApiService {
                 factoryId,
                 item.fctryManageNo()
         );
+        factoryRepository.savePrimaryIndustryCode(factoryId, item.rprsntvIndutyCode());
 
-        if (item.rnAdres() != null
-                && !item.rnAdres().isBlank()) {
-
-            try {
-                geocodingService.geocode(factoryId);
-            } catch (Exception ignored) {
-            }
+        try {
+            geocodingService.geocode(factoryId);
+        } catch (Exception ignored) {
         }
     }
 

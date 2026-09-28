@@ -12,6 +12,7 @@ spring:
     init:
       mode: ${DB_INIT_MODE:always}
       encoding: UTF-8
+      schema-locations: classpath:schema.sql,classpath:category-schema.sql
   servlet:
     multipart:
       max-file-size: 20MB
