@@ -11,8 +11,10 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class PublicFactoryApiService {
@@ -41,6 +43,7 @@ public class PublicFactoryApiService {
 
         int pageNo = 1;
         int numOfRows = 100;
+        String decodedServiceKey = UriUtils.decode(serviceKey, StandardCharsets.UTF_8);
 
         while (true) {
 
@@ -48,7 +51,7 @@ public class PublicFactoryApiService {
                     .fromHttpUrl(
                             "https://apis.data.go.kr/B550624/fctryRegistInfo/getFctryListInIrsttService_v2"
                     )
-                    .queryParam("serviceKey", serviceKey)
+                    .queryParam("serviceKey", decodedServiceKey)
                     .queryParam("pageNo", pageNo)
                     .queryParam("numOfRows", numOfRows)
                     .queryParam("irsttNm", industrialComplexName)
