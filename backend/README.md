@@ -36,6 +36,30 @@ CREATE DATABASE factorypick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 MySQL 서비스를 먼저 실행합니다. Windows에서는 서비스 목록의 `MySQL80` 상태가 실행 중인지 확인합니다.
 
+### 여러 PC에서 공유하는 MySQL
+
+같은 사설 네트워크의 한 PC에 MySQL Server를 설치하고, 다른 PC에서 실행하는 백엔드도 해당 MySQL을 바라보게 설정합니다. 이 프로젝트는 이미 MySQL JDBC 드라이버를 사용하므로 Docker 설정이나 별도 Java 코드 변경은 필요하지 않습니다.
+
+MySQL 서버에서 DB와 앱 계정을 만듭니다. 아래 계정의 호스트 부분은 백엔드를 실행하는 PC의 사설 IP로 바꾸고, 여러 PC가 접속하면 PC별로 계정을 생성하거나 허용할 네트워크 범위로 제한합니다.
+
+```sql
+CREATE DATABASE factorypick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'factorypick'@'192.168.0.100' IDENTIFIED BY '강한_비밀번호';
+GRANT ALL PRIVILEGES ON factorypick.* TO 'factorypick'@'192.168.0.100';
+```
+
+DB 서버 PC의 IPv4 주소가 `192.168.0.147`이면 각 백엔드 PC의 `backend/.env`를 다음처럼 설정합니다. `DB_PASSWORD`는 MySQL에서 계정을 만들 때 사용한 비밀번호와 같아야 합니다.
+
+```properties
+DB_URL=jdbc:mysql://192.168.0.147:3306/factorypick?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+DB_USERNAME=factorypick
+DB_PASSWORD=강한_비밀번호
+```
+
+MySQL 서버의 원격 접속을 허용하고, Windows 방화벽에서는 사설 네트워크의 백엔드 PC만 TCP 3306에 접속할 수 있게 제한합니다. 공유기 포트 포워딩으로 인터넷에 공개하지 말고, DB 서버 주소가 바뀌지 않도록 DHCP 주소 예약을 권장합니다.
+
+현재 개발 `.env`의 `DB_PASSWORD=1234`는 약한 비밀번호입니다. 위 계정을 만들 때 같은 값을 사용하면 연결은 되지만, 공유 네트워크에서는 더 강한 값으로 바꾸세요. 백엔드 시작 시 테이블이 생성되지만 기존 PC의 데이터를 자동 복사하거나 공공데이터를 자동 수집하지는 않습니다. 기존 데이터는 백업·복원하거나 공공데이터 API로 다시 가져와야 합니다.
+
 ### DB 구조
 
 `etc` 코드에서 확인한 구조에 맞춰 `company`, `region`, `factory`, `category`, `product`, `factory_product`를 사용합니다.

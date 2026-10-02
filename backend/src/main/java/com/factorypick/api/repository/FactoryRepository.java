@@ -117,6 +117,18 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
     );
 }
 
+    public int saveIndustrialComplexName(long factoryId, String industrialComplexName) {
+        return jdbc.update("""
+            UPDATE factory
+            SET industrial_complex_name = :industrialComplexName
+            WHERE factory_id = :factoryId
+            """,
+            new MapSqlParameterSource()
+                .addValue("factoryId", factoryId)
+                .addValue("industrialComplexName", industrialComplexName)
+        );
+    }
+
     @Transactional
     public int update(long id, FactoryRequest r) {
         String sql = """
