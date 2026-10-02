@@ -74,7 +74,7 @@ public class PublicFactoryApiService {
             for (PublicFactoryApiResponse.Item item :
                     response.body().items().item()) {
 
-                saveFactory(item);
+                saveFactory(item, industrialComplexName);
             }
 
             if (pageNo * numOfRows >= response.body().totalCount()) {
@@ -85,7 +85,7 @@ public class PublicFactoryApiService {
         }
     }
 
-    private void saveFactory(PublicFactoryApiResponse.Item item) {
+    private void saveFactory(PublicFactoryApiResponse.Item item, String industrialComplexName) {
 
         if (item.cmpnyNm() == null || item.cmpnyNm().isBlank()) {
             return;
@@ -135,6 +135,12 @@ public class PublicFactoryApiService {
         factoryRepository.saveFactoryManageNo(
                 factoryId,
                 item.fctryManageNo()
+        );
+        factoryRepository.saveIndustrialComplexName(
+            factoryId,
+            item.irsttNm() == null || item.irsttNm().isBlank()
+                ? industrialComplexName
+                : item.irsttNm()
         );
         factoryRepository.savePrimaryIndustryCode(factoryId, item.rprsntvIndutyCode());
 

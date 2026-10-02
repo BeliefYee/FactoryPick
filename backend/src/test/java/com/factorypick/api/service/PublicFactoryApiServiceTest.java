@@ -129,6 +129,7 @@ class PublicFactoryApiServiceTest {
         }
         assertThat(request.getValue().address()).isEqualTo("서울특별시 송파구 올림픽로 300");
         verify(factories).saveFactoryManageNo(42L, "valid");
+        verify(factories).saveIndustrialComplexName(42L, "산업단지");
         verify(factories).savePrimaryIndustryCode(42L, "26111");
         verify(geocoding).geocode(42L);
         verifyNoMoreInteractions(factories, geocoding);
