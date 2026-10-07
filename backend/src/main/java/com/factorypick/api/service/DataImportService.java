@@ -13,10 +13,9 @@ import java.util.*;
 @Service
 public class DataImportService {
     private final FactoryRepository factories;
-    private final ProductRepository products;
     private final DataImportRepository imports;
-    public DataImportService(FactoryRepository factories, ProductRepository products, DataImportRepository imports) {
-        this.factories = factories; this.products = products; this.imports = imports;
+    public DataImportService(FactoryRepository factories, DataImportRepository imports) {
+        this.factories = factories; this.imports = imports;
     }
 
     public ImportResult importCsv(MultipartFile file) {
@@ -36,14 +35,6 @@ public class DataImportService {
                         factoryId = existing.get().factoryId(); factories.update(factoryId, request); updated++;
                     } else {
                         factoryId = factories.insert(request); inserted++;
-                    }
-                    String productName = row.getOrDefault("product_name", "").trim();
-                    String category = row.getOrDefault("category", "").trim();
-                    if (!productName.isBlank()) {
-                        long productId = products.findByNameAndCategory(productName, category)
-                                .map(Product::productId)
-                                .orElseGet(() -> products.insert(new ProductRequest(productName, category, row.get("product_description"))));
-                        products.linkFactoryProduct(factoryId, productId);
                     }
                 } catch (Exception e) {
                     failed++;

@@ -21,12 +21,6 @@ public class StatisticsRepository {
                 GROUP BY c.category_id,c.category_name ORDER BY count DESC, label
                 """);
     }
-    public List<StatisticsResponse> byProduct() {
-        return query("""
-                SELECT p.product_name label, COUNT(DISTINCT fp.factory_id) count FROM product p
-                LEFT JOIN factory_product fp ON fp.product_id=p.product_id GROUP BY p.product_id,p.product_name ORDER BY count DESC
-                """);
-    }
     private List<StatisticsResponse> query(String sql) {
         return jdbc.query(sql, Map.of(), (rs, n) -> new StatisticsResponse(rs.getString("label"), rs.getLong("count")));
     }

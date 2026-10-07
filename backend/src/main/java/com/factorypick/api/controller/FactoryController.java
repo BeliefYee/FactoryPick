@@ -1,7 +1,6 @@
 package com.factorypick.api.controller;
 
 import com.factorypick.api.domain.Factory;
-import com.factorypick.api.domain.Product;
 import com.factorypick.api.dto.*;
 import com.factorypick.api.repository.FactoryRepository;
 import com.factorypick.api.service.FactoryService;
@@ -34,7 +33,7 @@ public class FactoryController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String sido,
             @RequestParam(required = false) String sigungu,
-            @RequestParam(required = false) String product,
+
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
@@ -44,7 +43,6 @@ public class FactoryController {
                 keyword,
                 sido,
                 sigungu,
-                product,
                 category,
                 page,
                 size
@@ -63,13 +61,6 @@ public class FactoryController {
         return service.detail(id);
     }
 
-    @GetMapping("/{id}/products")
-    public List<Product> products(
-            @PathVariable long id
-    ) {
-        return service.detail(id).products();
-    }
-
     @GetMapping("/markers")
     public List<MapMarkerResponse> markers(
             @RequestParam(defaultValue = "33.0") double south,
@@ -79,7 +70,7 @@ public class FactoryController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String sido,
             @RequestParam(required = false) String sigungu,
-            @RequestParam(required = false) String product,
+
             @RequestParam(required = false) String category
     ) {
 
@@ -98,7 +89,6 @@ public class FactoryController {
                         keyword,
                         sido,
                         sigungu,
-                        product,
                         category,
                         0,
                         20

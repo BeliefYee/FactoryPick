@@ -11,6 +11,6 @@ public record Factory(
         LocalDateTime createdAt, LocalDateTime updatedAt,
         String factoryManageNo, String representativeName, String managingAgencyName, String faxNumber,
         Integer employeeCount, LocalDate firstRegisteredDate, String primaryIndustryCode,
-        String mainProductText, String homepageRaw, String industrialComplexName,
+        @com.fasterxml.jackson.annotation.JsonIgnore String mainProductText, String homepageRaw, String industrialComplexName,
         String geocodingStatus, LocalDateTime geocodedAt, LocalDateTime lastSyncedAt
 ) {}

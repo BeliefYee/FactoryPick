@@ -1,4 +1,4 @@
--- Re-runnable classification setup. Existing product categories are preserved.
+-- Re-runnable classification based on primary industry codes.
 CREATE TABLE IF NOT EXISTS factory_industry_category_rule (
     industry_prefix VARCHAR(3) PRIMARY KEY,
     category_id BIGINT NOT NULL,
@@ -230,16 +230,11 @@ SELECT '96',category_id FROM category WHERE category_name='기타 서비스'
 ON DUPLICATE KEY UPDATE category_id=factory_industry_category_rule.category_id;
 
 -- Publishing (581) and software (582) have separate display categories.
--- UNION removes duplicate classifications from multiple linked products.
 CREATE OR REPLACE VIEW factory_category AS
 SELECT f.factory_id, ic.category_id
 FROM factory f
 JOIN factory_industry_category_rule ic ON ic.industry_prefix =
     CASE WHEN LEFT(TRIM(f.primary_industry_code),2)='58'
          THEN LEFT(TRIM(f.primary_industry_code),3)
-         ELSE LEFT(TRIM(f.primary_industry_code),2) END
-UNION
-SELECT fp.factory_id, p.category_id
-FROM factory_product fp JOIN product p ON p.product_id=fp.product_id
-WHERE p.category_id IS NOT NULL;
+         ELSE LEFT(TRIM(f.primary_industry_code),2) END;
 

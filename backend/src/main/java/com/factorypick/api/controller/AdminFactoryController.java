@@ -17,20 +17,20 @@ public class AdminFactoryController {
     public PageResponse<Factory> search(@RequestParam(required=false) String keyword,
                                         @RequestParam(required=false) String sido,
                                         @RequestParam(required=false) String sigungu,
-                                        @RequestParam(required=false) String product,
+
                                         @RequestParam(required=false) String category,
                                         @RequestParam(defaultValue="0") int page,
                                         @RequestParam(defaultValue="20") int size) {
-        return service.search(keyword, sido, sigungu, product, category, page, size);
+        return service.search(keyword, sido, sigungu, category, page, size);
     }
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FactoryDetailResponse create(@Valid @RequestBody FactorySaveRequest request) {
-        return service.create(request.factory(), request.productIds());
+        return service.create(request.factory());
     }
     @PutMapping("/{id}")
     public FactoryDetailResponse update(@PathVariable long id, @Valid @RequestBody FactorySaveRequest request) {
-        return service.update(id, request.factory(), request.productIds());
+        return service.update(id, request.factory());
     }
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

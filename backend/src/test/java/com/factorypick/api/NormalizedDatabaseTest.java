@@ -12,7 +12,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Opt-in: MYSQL_TEST_URL must point to a separate test database. */
@@ -26,7 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class NormalizedDatabaseTest {
     @Autowired FactoryService factories;
-    @Autowired ProductService products;
     @Autowired FactoryRepository factoryRepository;
     @Autowired StatisticsRepository statistics;
     @Autowired DataImportService imports;
@@ -34,7 +32,7 @@ class NormalizedDatabaseTest {
 
     @Test void geocodingPersistsOnlyForTheAddressThatWasLookedUp() {
         var f = factories.create(new FactoryRequest(null, "geocode", null, "original address", null, null,
-                null, null, null, null, null, null), List.of()).factory();
+                null, null, null, null, null, null)).factory();
         var result = new com.factorypick.api.service.KakaoGeocodingClient.Result("RESOLVED",
                 new BigDecimal("37.5"), new BigDecimal("127.1"));
         assertThat(factoryRepository.saveGeocoding(f.factoryId(), "old address", result)).isZero();
@@ -46,10 +44,10 @@ class NormalizedDatabaseTest {
         assertThat(factoryRepository.saveGeocoding(f.factoryId(), "original address", result)).isZero();
     }
 
-    @Test void publicDataWithoutCoordinatesPreservesMetadataAndSupportsUnclassifiedProducts() {
+    @Test void publicDataWithoutCoordinatesPreservesMetadata() {
         var request = new FactoryRequest(null, "삼성전자(주) 온양사업장", null,
             "충청남도 아산시 배방읍 배방로 158", null, null, null, null, null, null, null, null);
-        var factory = factories.create(request, List.of()).factory();
+        var factory = factories.create(request).factory();
         jdbc.update("""
             UPDATE factory SET factory_manage_no=?, representative_name=?, managing_agency_name=?,
             fax_number=?, employee_count=?, first_registered_date=?, primary_industry_code=?,
@@ -68,36 +66,25 @@ class NormalizedDatabaseTest {
         assertThat(loaded.geocodingStatus()).isEqualTo("PENDING");
         assertThat(loaded.latitude()).isNull();
         assertThat(factoryRepository.markers(33, 124, 39, 132)).noneMatch(m -> m.factoryId() == factory.factoryId());
-        assertThat(factories.search("온양", null, null, null, null, 0, 20).totalElements()).isEqualTo(1);
-        var product = products.create(new ProductRequest("반도체 pkg", null, null));
-        assertThat(product.category()).isNull();
-        factories.update(factory.factoryId(), request, List.of(product.productId()));
+        assertThat(factories.search("온양", null, null, null, 0, 20).totalElements()).isEqualTo(1);
         assertThat(statistics.byRegion()).contains(new StatisticsResponse("미분류", 1));
         assertThat(statistics.byCategory()).contains(new StatisticsResponse("전자·반도체", 1));
-        assertThat(products.search("반도체", null, 0, 20).totalElements()).isEqualTo(1);
         factories.delete(factory.factoryId());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM factory_industry WHERE factory_id=?", Long.class, factory.factoryId())).isZero();
     }
 
-    @Test void industryCategoriesWorkWithoutProductsAndStayInSyncWithExistingProductCategories() {
-        var factory = factories.create(request("INDUSTRY-1", "metal works", null, null, null), List.of()).factory();
+    @Test void industryCategoriesFollowPrimaryIndustryCode() {
+        var factory = factories.create(request("INDUSTRY-1", "metal works", null, null, null)).factory();
         factoryRepository.savePrimaryIndustryCode(factory.factoryId(), "25999");
         assertThat(factoryRepository.categories()).contains("금속·철강").doesNotContain("통신");
         assertThat(factories.detail(factory.factoryId()).categories()).containsExactly("금속·철강");
-        assertThat(factories.search(null,null,null,null,"금속·철강",0,20).content())
+        assertThat(factories.search(null,null,null,"금속·철강",0,20).content())
                 .extracting(com.factorypick.api.domain.Factory::factoryId).containsExactly(factory.factoryId());
         assertThat(factoryRepository.markers(37,127,38,128,
-                new FactorySearchCondition(null,null,null,null,"금속·철강",0,20)))
+                new FactorySearchCondition(null,null,null,"금속·철강",0,20)))
                 .singleElement().satisfies(m -> assertThat(m.categories()).containsExactly("금속·철강"));
         assertThat(statistics.byCategory()).contains(new StatisticsResponse("금속·철강",1));
 
-        var product = products.create(new ProductRequest("metal part", "금속·철강", null));
-        var second = products.create(new ProductRequest("special part", "custom category", null));
-        factories.update(factory.factoryId(), request("INDUSTRY-1","metal works",null,null,null),
-                List.of(product.productId(),second.productId()));
-        assertThat(factories.detail(factory.factoryId()).categories()).containsExactlyInAnyOrder("금속·철강","custom category");
-        assertThat(statistics.byCategory()).contains(new StatisticsResponse("금속·철강",1));
-        assertThat(products.search(null,"금속·철강",0,20).content()).hasSize(2);
         factoryRepository.savePrimaryIndustryCode(factory.factoryId(), " ");
         assertThat(factories.detail(factory.factoryId()).factory().primaryIndustryCode()).isEqualTo("25999");
 
@@ -112,12 +99,12 @@ class NormalizedDatabaseTest {
                 java.util.stream.IntStream.range(0,10001)
                         .mapToObj(i -> new Object[]{"cluster-test-" + i}).toList());
         var markers = factoryRepository.markers(37,127,38,128,
-                new FactorySearchCondition("cluster-test-",null,null,null,null,0,20));
+                new FactorySearchCondition("cluster-test-",null,null,null,0,20));
         assertThat(markers).hasSize(10001);
         assertThat(markers).extracting(MapMarkerResponse::factoryId).doesNotHaveDuplicates();
         assertThat(markers).allSatisfy(marker -> assertThat(marker.address()).isEqualTo("서울특별시 금천구 디지털로9길 33, 502호"));
         assertThat(factoryRepository.markers(33,124,34,125,
-                new FactorySearchCondition("cluster-test-",null,null,null,null,0,20))).isEmpty();
+                new FactorySearchCondition("cluster-test-",null,null,null,0,20))).isEmpty();
     }
 
     @Test void databaseRejectsDuplicateManageNumbersAndPartialCoordinates() {
@@ -130,10 +117,6 @@ class NormalizedDatabaseTest {
             "INSERT INTO factory(factory_name,latitude) VALUES ('partial',37.5)"))
             .isInstanceOf(org.springframework.dao.DataAccessException.class)
             .hasMessageContaining("chk_factory_coordinate_pair");
-        jdbc.update("INSERT INTO product(product_name) VALUES ('unclassified')");
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update(
-            "INSERT INTO product(product_name) VALUES ('unclassified')"))
-            .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
     }
 
     private FactoryRequest request(String number, String name, String company, String sido, String sigungu) {
@@ -146,48 +129,46 @@ class NormalizedDatabaseTest {
         var result = imports.importCsv(new MockMultipartFile("file", "test.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8)));
         assertThat(result.failedRows()).isZero();
         assertThat(result.insertedRows()).isEqualTo(1);
-        var factory = factories.search("Unknown location", null, null, null, null, 0, 20).content().get(0);
+        var factory = factories.search("Unknown location", null, null, null, 0, 20).content().get(0);
         assertThat(factory.latitude()).isNull();
         assertThat(factory.companyName()).isNull();
-        assertThat(factories.detail(factory.factoryId()).products()).hasSize(1);
     }
 
     @Test void joinsFiltersUpdatesAndCascadesPreserveTheApiContract() {
-        var product = products.create(new ProductRequest("test milk", "test dairy", "description"));
-        var first = factories.create(request("TEST-1", "first", "shared company", "test sido", null), List.of(product.productId())).factory();
-        var second = factories.create(request("TEST-2", "second", "shared company", "test sido", ""), List.of(product.productId())).factory();
+        var first = factories.create(request("TEST-1", "first", "shared company", "test sido", null)).factory();
+        var second = factories.create(request("TEST-2", "second", "shared company", "test sido", "")).factory();
+        factoryRepository.savePrimaryIndustryCode(first.factoryId(), "10101");
+        factoryRepository.savePrimaryIndustryCode(second.factoryId(), "10101");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM company WHERE company_name='shared company'", Long.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM region WHERE sido_name='test sido'", Long.class)).isEqualTo(1);
         assertThat(first.sigungu()).isNull();
-        assertThat(first.establishedYear()).isEqualTo(2015);
-        assertThat(first.industry()).isEqualTo("food");
-        assertThat(factories.search("shared company", "test sido", null, "milk", "test dairy", 0, 1).totalElements()).isEqualTo(2);
-        assertThat(factories.search(null, null, null, null, "missing", 0, 20).content()).isEmpty();
-        assertThat(products.search("milk", "test dairy", 0, 20).totalElements()).isEqualTo(1);
-        assertThat(products.factories(product.productId())).hasSize(2).allSatisfy(f -> assertThat(f.latitude()).isEqualByComparingTo("37.5"));
-        assertThat(factoryRepository.markers(37, 127, 38, 128)).anySatisfy(m -> assertThat(m.categories()).contains("test dairy"));
+        assertThat(factories.search("shared company", "test sido", null, "식품·음료", 0, 1).totalElements()).isEqualTo(2);
         assertThat(factoryRepository.markers(37,127,38,128,
-                new FactorySearchCondition("first", "test sido", null, "milk", "test dairy",0,20)))
+                new FactorySearchCondition("first", "test sido", null, "식품·음료",0,20)))
                 .extracting(MapMarkerResponse::factoryId).containsExactly(first.factoryId());
-        assertThat(factoryRepository.markers(37,127,38,128,
-                new FactorySearchCondition(null,null,null,null,"missing",0,20))).isEmpty();
-        assertThat(factoryRepository.markers(33,124,34,125,
-                new FactorySearchCondition(null,null,null,null,"test dairy",0,20))).isEmpty();
-        assertThat(statistics.byRegion()).contains(new StatisticsResponse("test sido", 2));
-        assertThat(statistics.byCategory()).contains(new StatisticsResponse("test dairy", 2));
-        assertThat(statistics.byProduct()).contains(new StatisticsResponse("test milk", 2));
-
-        factories.update(first.factoryId(), request("TEST-1", "renamed", "new company", "new sido", "new district"), null);
-        assertThat(factories.detail(first.factoryId()).products()).hasSize(1);
+        assertThat(statistics.byCategory()).contains(new StatisticsResponse("식품·음료", 2));
+        factories.update(first.factoryId(), request("TEST-1", "renamed", "new company", "new sido", "new district"));
         assertThat(factories.detail(second.factoryId()).factory().companyName()).isEqualTo("shared company");
-        assertThat(factories.search(null, "new sido", "new district", null, null, 0, 20).totalElements()).isEqualTo(1);
-        products.update(product.productId(), new ProductRequest("test milk", "new category", "updated"));
-        assertThat(products.categories()).contains("new category").doesNotContain("test dairy");
-        assertThat(factories.detail(first.factoryId()).products().get(0).category()).isEqualTo("new category");
+        assertThat(factories.search(null, "new sido", "new district", null, 0, 20).totalElements()).isEqualTo(1);
         factories.delete(first.factoryId());
-        assertThat(products.factories(product.productId())).hasSize(1);
-        products.delete(product.productId());
-        assertThat(factories.detail(second.factoryId()).products()).isEmpty();
+        assertThat(factories.search(null, null, null, "식품·음료", 0, 20).totalElements()).isEqualTo(1);
+    }
+
+    @Test void districtSearchAcceptsNamesWithOrWithoutAdministrativeSuffixes() {
+        for (String district : new String[]{"영암군", "여수시", "송파구"}) {
+            var factory = factories.create(request("SUFFIX-" + district, "suffix test " + district,
+                    null, "test province", district)).factory();
+            String shortName = district.substring(0, district.length() - 1);
+            for (String query : new String[]{district, shortName, " " + shortName + " "}) {
+                var results = factories.search("suffix test", "test province", query, null, 0, 20);
+                assertThat(results.totalElements()).isEqualTo(1);
+                assertThat(results.content()).extracting(com.factorypick.api.domain.Factory::factoryId)
+                        .containsExactly(factory.factoryId());
+                assertThat(factoryRepository.markers(37, 127, 38, 128,
+                        new FactorySearchCondition("suffix test", "test province", query, null, 0, 20)))
+                        .extracting(MapMarkerResponse::factoryId).containsExactly(factory.factoryId());
+            }
+        }
     }
 
     @Test void csvImportReusesReferencesAndUpdatesExistingFactories() {
@@ -197,8 +178,6 @@ class NormalizedDatabaseTest {
         assertThat(imports.importCsv(file).insertedRows()).isEqualTo(1);
         assertThat(imports.importCsv(file).updatedRows()).isEqualTo(1);
         var factory = factoryRepository.findExisting(null, "CSV factory", "CSV address").orElseThrow();
-        assertThat(factories.detail(factory.factoryId()).products()).hasSize(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM company WHERE company_name='CSV company'", Long.class)).isEqualTo(1);
-        assertThat(products.search("CSV product", "CSV category", 0, 20).totalElements()).isEqualTo(1);
     }
 }
