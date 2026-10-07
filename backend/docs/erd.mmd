@@ -1,0 +1,100 @@
+erDiagram
+    company |o--o{ factory : "company_id"
+    region |o--o{ factory : "region_id"
+    factory ||--o{ factory_industry : "factory_id"
+    category |o--o{ product : "category_id"
+    factory ||--o{ factory_product : "factory_id"
+    product ||--o{ factory_product : "product_id"
+    category ||--o{ factory_industry_category_rule : "category_id"
+
+    company {
+        bigint company_id PK "NOT NULL"
+        varchar(150) company_name UK "NOT NULL"
+    }
+
+    region {
+        bigint region_id PK "NOT NULL"
+        varchar(50) sido_name "NOT NULL"
+        varchar(80) sigungu_name "NOT NULL"
+    }
+
+    category {
+        bigint category_id PK "NOT NULL"
+        varchar(100) category_name UK "NOT NULL"
+    }
+
+    factory {
+        bigint factory_id PK "NOT NULL"
+        varchar(30) business_number UK "NULL"
+        varchar(30) factory_manage_no UK "NULL"
+        varchar(255) factory_name "NOT NULL"
+        bigint company_id FK "NULL"
+        bigint region_id FK "NULL"
+        varchar(1000) address "NULL"
+        decimal latitude "NULL, DECIMAL(10,7)"
+        decimal longitude "NULL, DECIMAL(10,7)"
+        text industry_name "NULL"
+        varchar(255) representative_name "NULL"
+        varchar(255) managing_agency_name "NULL"
+        varchar(100) fax_number "NULL"
+        date first_registered_date "NULL"
+        varchar(10) primary_industry_code "NULL"
+        text main_product_text "NULL"
+        text homepage_raw "NULL"
+        varchar(255) industrial_complex_name "NULL"
+        json source_payload "NULL"
+        datetime last_synced_at "NULL"
+        varchar(20) geocoding_status "NOT NULL"
+        datetime geocoded_at "NULL"
+        int employee_count "NULL"
+        smallint established_year "NULL"
+        varchar(50) factory_scale "NULL"
+        varchar(100) phone "NULL"
+        timestamp created_at "NOT NULL"
+        timestamp updated_at "NOT NULL"
+    }
+
+    factory_industry {
+        bigint factory_id PK, FK "NOT NULL"
+        varchar(10) industry_code PK "NOT NULL"
+    }
+
+    product {
+        bigint product_id PK "NOT NULL"
+        varchar(150) product_name "NOT NULL"
+        bigint category_id FK "NULL"
+        bigint category_key "GENERATED COALESCE(category_id,0)"
+        varchar(500) description "NULL"
+        timestamp created_at "NOT NULL"
+        timestamp updated_at "NOT NULL"
+    }
+
+    factory_product {
+        bigint factory_id PK, FK "NOT NULL"
+        bigint product_id PK, FK "NOT NULL"
+    }
+
+    admins {
+        bigint admin_id PK "NOT NULL"
+        varchar(50) username UK "NOT NULL"
+        varchar(100) password_hash "NOT NULL"
+        timestamp created_at "NOT NULL"
+    }
+
+    data_imports {
+        bigint import_id PK "NOT NULL"
+        varchar(255) source_name "NOT NULL"
+        int total_rows "NOT NULL"
+        int inserted_rows "NOT NULL"
+        int updated_rows "NOT NULL"
+        int skipped_rows "NOT NULL"
+        int failed_rows "NOT NULL"
+        varchar(20) status "NOT NULL"
+        varchar(1000) message "NULL"
+        timestamp imported_at "NOT NULL"
+    }
+
+    factory_industry_category_rule {
+        varchar(3) industry_prefix PK "NOT NULL"
+        bigint category_id FK "NOT NULL"
+    }

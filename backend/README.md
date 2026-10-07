@@ -1,6 +1,6 @@
 # FactoryPick Backend
 
-전국 식품 생산 공장과 생산제품을 지도·검색·통계 화면에 제공하는 REST API 서버입니다.
+전국 공장을 지도·검색·통계 화면에 제공하는 REST API 서버입니다.
 
 ## 기술 구성
 
@@ -13,10 +13,10 @@
 ## 구현 범위
 
 - 공장 위치 마커 및 지도 영역 조회
-- 지역·공장·기업·제품·카테고리 복합 검색
-- 공장/제품 상세 및 생산 관계 조회
-- 지역·제품·카테고리 통계
-- 관리자 로그인과 공장/제품 CRUD
+- 지역·공장·기업·카테고리 복합 검색
+- 공장 상세 조회
+- 지역·카테고리 통계
+- 관리자 로그인과 공장 CRUD
 - CSV 공공데이터 등록, 중복 방지, 기존 데이터 갱신, 처리 이력
 - 입력값 검증, 공통 오류 응답, CORS 설정
 
@@ -63,7 +63,7 @@ MySQL 서버의 원격 접속을 허용하고, Windows 방화벽에서는 사설
 ### DB 구조
 
 `etc` 코드에서 확인한 구조에 맞춰 `company`, `region`, `factory`, `category`, `product`, `factory_product`를 사용합니다.
-공장은 회사·지역 ID를, 제품은 카테고리 ID를 참조하며 공장과 제품은 연결 테이블로 다대다 관계를 맺습니다. 아직 확인되지 않은 연결은 NULL을 허용합니다.
+공장은 회사·지역 ID를 참조하며 카테고리는 대표 업종코드로 분류합니다. 제품 관련 테이블은 이전 데이터와 마이그레이션 호환성을 위해 보존하며 서비스에서 사용하지 않습니다.
 기존 REST API 주소와 요청·응답 필드는 유지합니다. 이름으로 받은 회사·지역·분류는 서버에서 ID로 변환합니다.
 
 `etc`에는 DDL이 없으므로 타입·제약조건은 이 프로젝트의 `src/main/resources/schema.sql`에서 정의했습니다.
@@ -147,17 +147,11 @@ Authorization: Bearer 발급받은토큰
 |---|---:|---|---|
 | 지도 | GET | `/api/factories/markers?south=33&west=124&north=39&east=132` | 현재 지도 영역 마커 조회 |
 | 공장 | GET | `/api/factories` | 검색 및 복합 필터 |
-| 공장 | GET | `/api/factories/{id}` | 공장 및 생산제품 상세 |
-| 공장 | GET | `/api/factories/{id}/products` | 공장별 생산제품 목록 |
-| 제품 | GET | `/api/products` | 제품명·카테고리 검색 |
-| 제품 | GET | `/api/products/{id}/factories` | 제품별 생산 공장 |
-| 제품 | GET | `/api/products/categories` | 카테고리 목록 |
+| 공장 | GET | `/api/factories/{id}` | 공장 상세 |
 | 통계 | GET | `/api/statistics/regions` | 지역별 공장 수 |
 | 통계 | GET | `/api/statistics/categories` | 카테고리별 공장 수 |
-| 통계 | GET | `/api/statistics/products` | 제품별 공장 수 |
 | 인증 | POST | `/api/admin/auth/login` | 관리자 로그인 |
 | 공장관리 | POST/PUT/DELETE | `/api/admin/factories` | 공장 CRUD |
-| 제품관리 | POST/PUT/DELETE | `/api/admin/products` | 제품 CRUD |
 | 데이터 | POST | `/api/admin/data/imports/csv` | CSV 업로드 |
 | 데이터 | GET | `/api/admin/data/imports` | 최근 처리 이력 |
 
@@ -186,12 +180,10 @@ GET /api/factories?keyword=식품&sido=서울특별시&category=가공식품&pag
     "establishedYear": 2022,
     "factoryScale": "중소",
     "phone": "031-000-0000"
-  },
-  "productIds": [1, 3]
+  }
 }
 ```
 
-수정 시 `productIds`를 생략하면 기존 생산제품 연결을 유지하고, 빈 배열을 보내면 연결을 모두 제거합니다.
 
 ## CSV 데이터 등록
 
@@ -199,9 +191,9 @@ GET /api/factories?keyword=식품&sido=서울특별시&category=가공식품&pag
 
 - `factory_name`
 
-회사명·주소·지역·좌표·제품 카테고리는 미확정이면 비워둘 수 있습니다. 위도·경도는 둘 다 입력하거나 둘 다 비워야 합니다.
+회사명·주소·지역·좌표는 미확정이면 비워둘 수 있습니다. 위도·경도는 둘 다 입력하거나 둘 다 비워야 합니다.
 
-중복 판정의 기본 키는 `business_number`입니다. 같은 사업자번호의 행을 다시 올리면 기존 공장 정보를 수정합니다. 제품명과 카테고리 조합도 중복 저장되지 않습니다.
+중복 판정의 기본 키는 `business_number`입니다. 같은 사업자번호의 행을 다시 올리면 기존 공장 정보를 수정합니다.
 
 ```bash
 curl -X POST http://localhost:8080/api/admin/data/imports/csv \
@@ -216,7 +208,6 @@ curl -X POST http://localhost:8080/api/admin/data/imports/csv \
 - `SCR-01~05, SCR-11`: 공장 검색 및 마커 API
 - `SCR-06~07`: 공장 상세 API
 - `SCR-08~10`: 통계 API
-- `SCR-12`: 제품 API
 - `SCR-13~16, SCR-18`: 관리자 인증 및 CRUD API
 - `SCR-17, SCR-19`: CSV 등록 및 처리 이력 API
 
@@ -234,3 +225,5 @@ MySQL 통합 테스트는 별도의 빈 테스트 DB를 만들고 `MYSQL_TEST_UR
 - 허용할 프론트엔드 주소를 `CORS_ALLOWED_ORIGINS`에 지정
 - 운영 환경에서는 `DB_INIT_MODE=never`를 사용하고 Flyway 같은 마이그레이션 도구 도입 권장
 - 현재 관리자 토큰은 단일 서버 메모리에 저장되므로 서버 재시작 시 만료됨
+
+제품 목록·상세·검색·통계·관리 API와 CSV 제품 연결 기능은 제거되었습니다. 기존 제품 데이터는 삭제하지 않습니다. `DB_INIT_MODE=never`인 기존 DB는 `src/main/resources/category-schema.sql`을 적용해야 업종 기준 분류로 전환됩니다.

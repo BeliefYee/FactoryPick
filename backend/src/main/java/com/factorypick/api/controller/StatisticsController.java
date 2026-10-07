@@ -12,5 +12,4 @@ public class StatisticsController {
     public StatisticsController(StatisticsRepository statistics) { this.statistics = statistics; }
     @GetMapping("/regions") public List<StatisticsResponse> regions() { return statistics.byRegion(); }
     @GetMapping("/categories") public List<StatisticsResponse> categories() { return statistics.byCategory(); }
-    @GetMapping("/products") public List<StatisticsResponse> products() { return statistics.byProduct(); }
 }

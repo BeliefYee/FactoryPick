@@ -63,7 +63,7 @@ public class FactoryRepository {
     }
 
     public List<MapMarkerResponse> markers(double south, double west, double north, double east) {
-        return markers(south, west, north, east, new FactorySearchCondition(null,null,null,null,null,0,20));
+        return markers(south, west, north, east, new FactorySearchCondition(null,null,null,null,0,20));
     }
 
     public List<MapMarkerResponse> markers(double south, double west, double north, double east, FactorySearchCondition condition) {
@@ -197,9 +197,8 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
                  WHERE (:keyword='' OR f.factory_name LIKE CONCAT('%',:keyword,'%')
                     OR c.company_name LIKE CONCAT('%',:keyword,'%') OR f.address LIKE CONCAT('%',:keyword,'%'))
                    AND (:sido='' OR r.sido_name=:sido)
-                   AND (:sigungu='' OR r.sigungu_name=:sigungu)
-                   AND (:product='' OR EXISTS (SELECT 1 FROM factory_product fp JOIN product p ON p.product_id=fp.product_id
-                       WHERE fp.factory_id=f.factory_id AND p.product_name LIKE CONCAT('%',:product,'%')))
+                   AND (:sigungu='' OR r.sigungu_name IN
+                       (:sigungu, CONCAT(:sigungu,'시'), CONCAT(:sigungu,'군'), CONCAT(:sigungu,'구')))
                    AND (:category='' OR EXISTS (SELECT 1 FROM factory_category fc
                        JOIN category cat ON cat.category_id=fc.category_id
                        WHERE fc.factory_id=f.factory_id AND cat.category_name=:category))
@@ -209,7 +208,7 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
     private MapSqlParameterSource params(FactorySearchCondition c) {
         return new MapSqlParameterSource()
                 .addValue("keyword", clean(c.keyword())).addValue("sido", clean(c.sido()))
-                .addValue("sigungu", clean(c.sigungu())).addValue("product", clean(c.product()))
+                .addValue("sigungu", clean(c.sigungu()))
                 .addValue("category", clean(c.category()));
     }
 
