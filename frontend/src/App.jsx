@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import FactoryMap from './components/FactoryMap'
 import CategoryIcon from './components/CategoryIcon'
 import CategorySelect from './components/CategorySelect'
+import FilterSelect from './components/FilterSelect'
 import { FactoryDetail, StatsPanel } from './components/Panels'
 import Management, { DeleteDialog, Editor, Login } from './components/Management'
 import { Field, Icon, Pagination, State } from './components/UI'
@@ -62,7 +63,7 @@ export default function App() {
     <div className="workspace">
       <aside className="panel filters"><div className="panel-heading"><h2>필터</h2><button className="small-button" onClick={reset}>초기화</button></div><form onSubmit={e=>{e.preventDefault();apply(draft)}}>
         <Field label="공장 · 기업 검색"><div className="search-input"><Icon name="search" size={17}/><input value={draft.keyword} onChange={e=>setDraft({...draft,keyword:e.target.value})} placeholder="공장명, 기업명, 주소"/></div></Field>
-        <Field label="지역"><select value={draft.sido} onChange={e=>setDraft({...draft,sido:e.target.value,sigungu:''})}><option value="">전체 지역</option>{regions.data?.filter(r=>r.label!=='미분류').map(r=><option key={r.label}>{r.label}</option>)}</select></Field>
+        <Field label="지역"><FilterSelect value={draft.sido} options={regions.data?.filter(r=>r.label!=='미분류').map(r=>r.label)} label="지역" emptyLabel="전체 지역" onChange={value=>setDraft({...draft,sido:value,sigungu:''})}/></Field>
         <Field label="시 · 군 · 구"><input value={draft.sigungu} onChange={e=>setDraft({...draft,sigungu:e.target.value})} placeholder="예: 송파구"/></Field>
         <Field label="업종 카테고리"><CategorySelect value={draft.category} categories={categories.data} onChange={value=>apply({...draft,category:value})}/></Field>
         <button className="primary block" type="submit"><Icon name="search" size={18}/>공장 검색</button>

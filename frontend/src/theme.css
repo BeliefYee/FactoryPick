@@ -73,6 +73,8 @@
 :root:not([data-theme=black]) :is(.brand p,.filter-summary p,.filter-summary strong small,.eyebrow,.connection,.fine-print,.muted,.rank-row strong small,.donut span,.donut small,.detail-values dt,.inspector-note,.empty,.cell-description,.pagination,.metric>span,.metric strong small,.auth-gate p,footer) { color:var(--light-muted); }
 :root:not([data-theme=black]) :is(.filter-summary,.detail-section,.location-state,.more-detail,td,.compact-list>button) { border-color:var(--light-border); }
 :root:not([data-theme=black]) .filter-divider { background:var(--light-border); }
+:root:not([data-theme=black]) .category-grid { border-color:#cfdae5; }
+:root:not([data-theme=black]) .list-view .table-wrap { border-color:#cfdae5; }
 :root:not([data-theme=black]) :is(.category-grid button.active,.category-ribbon button.active,.segmented button.active) { background:#e4f1ff; border-color:#6aa7df; color:#185f9f; }
 :root:not([data-theme=black]) .map-stage { background:#e2edf4; }
 :root:not([data-theme=black]) :is(.map-counter,.category-ribbon,.map-caption) { background:#ffffffc2; border-color:#cbdce8; color:#25384b; }
@@ -131,4 +133,37 @@
   .theme-control { gap:5px; }
   .theme-label { font-size:11px; }
   .header-actions { gap:8px; }
+}
+
+/* Shared region/category controls; keep the focus ring while the portal is open. */
+:root .filters {
+  --filter-select-bg:#f8fafc;
+  --filter-select-color:#25384b;
+  --filter-select-border:#cfdae5;
+  --filter-select-hover-bg:#e9f1fa;
+  --filter-select-hover-border:#91b8da;
+  --filter-select-arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%2325384b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root[data-theme=black] .filters {
+  --filter-select-bg:#10202d;
+  --filter-select-color:#e9f0f6;
+  --filter-select-border:#293c4b;
+  --filter-select-hover-bg:#213a4d;
+  --filter-select-hover-border:#4a6b85;
+  --filter-select-arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%23e9f0f6' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root .filters :is(select,button).filter-select {
+  appearance:none;
+  width:100%; min-width:0; padding:10px 38px 10px 11px;
+  border:1px solid var(--filter-select-border); border-radius:6px;
+  background:var(--filter-select-bg) var(--filter-select-arrow) no-repeat right 14px center / 12px 12px;
+  color:var(--filter-select-color); font:inherit; text-align:left;
+  cursor:pointer; transition:background-color .15s,border-color .15s;
+}
+:root .filters :is(select,button).filter-select:hover:not(:disabled) {
+  background-color:var(--filter-select-hover-bg);
+  border-color:var(--filter-select-hover-border);
+}
+:root .filters .filter-select:is(:focus,[aria-expanded=true]) {
+  outline:2px solid #64c7ff; outline-offset:3px;
 }
