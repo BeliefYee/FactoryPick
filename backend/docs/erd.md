@@ -6,6 +6,13 @@
 - [업종 분류 테이블 및 뷰 DDL](../src/main/resources/category-schema.sql)
 - [전체 ERD Mermaid 원본](./erd.mmd)
 
+## PNG 이미지
+
+- [전체 ERD 이미지 (4800 × 3400)](./images/FactoryPick-ERD.png)
+- [공장 테이블 상세 이미지 (2240 × 2720)](./images/FactoryPick-factory-details.png)
+
+전체 컬럼과 관계를 담은 별도 이미지입니다. 원본 크기로 열어 확대해서 볼 수 있습니다.
+
 ## 관계 요약
 
 ```mermaid

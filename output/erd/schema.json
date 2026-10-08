@@ -1,0 +1,489 @@
+{
+  "tables": {
+    "company": [
+      {
+        "name": "company_id",
+        "type": "BIGINT",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "company_name",
+        "type": "VARCHAR(150)",
+        "key": "UK",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "region": [
+      {
+        "name": "region_id",
+        "type": "BIGINT",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "sido_name",
+        "type": "VARCHAR(50)",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "sigungu_name",
+        "type": "VARCHAR(80)",
+        "key": "",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "category": [
+      {
+        "name": "category_id",
+        "type": "BIGINT",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "category_name",
+        "type": "VARCHAR(100)",
+        "key": "UK",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "factory": [
+      {
+        "name": "factory_id",
+        "type": "BIGINT",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "business_number",
+        "type": "VARCHAR(30)",
+        "key": "UK",
+        "nullable": "NULL"
+      },
+      {
+        "name": "factory_manage_no",
+        "type": "VARCHAR(30)",
+        "key": "UK",
+        "nullable": "NULL"
+      },
+      {
+        "name": "factory_name",
+        "type": "VARCHAR(255)",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "company_id",
+        "type": "BIGINT",
+        "key": "FK",
+        "nullable": "NULL"
+      },
+      {
+        "name": "region_id",
+        "type": "BIGINT",
+        "key": "FK",
+        "nullable": "NULL"
+      },
+      {
+        "name": "address",
+        "type": "VARCHAR(1000)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "latitude",
+        "type": "DECIMAL(10,7)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "longitude",
+        "type": "DECIMAL(10,7)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "industry_name",
+        "type": "TEXT",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "representative_name",
+        "type": "VARCHAR(255)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "managing_agency_name",
+        "type": "VARCHAR(255)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "fax_number",
+        "type": "VARCHAR(100)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "first_registered_date",
+        "type": "DATE",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "primary_industry_code",
+        "type": "VARCHAR(10)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "main_product_text",
+        "type": "TEXT",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "homepage_raw",
+        "type": "TEXT",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "industrial_complex_name",
+        "type": "VARCHAR(255)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "source_payload",
+        "type": "JSON",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "last_synced_at",
+        "type": "DATETIME",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "geocoding_status",
+        "type": "VARCHAR(20)",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "geocoded_at",
+        "type": "DATETIME",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "employee_count",
+        "type": "INT",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "established_year",
+        "type": "SMALLINT",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "factory_scale",
+        "type": "VARCHAR(50)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "phone",
+        "type": "VARCHAR(100)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMP",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMP",
+        "key": "",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "factory_industry": [
+      {
+        "name": "factory_id",
+        "type": "BIGINT",
+        "key": "PK, FK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "industry_code",
+        "type": "VARCHAR(10)",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "product": [
+      {
+        "name": "product_id",
+        "type": "BIGINT",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "product_name",
+        "type": "VARCHAR(150)",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "category_id",
+        "type": "BIGINT",
+        "key": "FK",
+        "nullable": "NULL"
+      },
+      {
+        "name": "category_key",
+        "type": "BIGINT",
+        "key": "",
+        "nullable": "GENERATED"
+      },
+      {
+        "name": "description",
+        "type": "VARCHAR(500)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMP",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMP",
+        "key": "",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "factory_product": [
+      {
+        "name": "factory_id",
+        "type": "BIGINT",
+        "key": "PK, FK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "product_id",
+        "type": "BIGINT",
+        "key": "PK, FK",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "admins": [
+      {
+        "name": "admin_id",
+        "type": "BIGINT",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "username",
+        "type": "VARCHAR(50)",
+        "key": "UK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "password_hash",
+        "type": "VARCHAR(100)",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMP",
+        "key": "",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "data_imports": [
+      {
+        "name": "import_id",
+        "type": "BIGINT",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "source_name",
+        "type": "VARCHAR(255)",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "total_rows",
+        "type": "INT",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "inserted_rows",
+        "type": "INT",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "updated_rows",
+        "type": "INT",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "skipped_rows",
+        "type": "INT",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "failed_rows",
+        "type": "INT",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(20)",
+        "key": "",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "message",
+        "type": "VARCHAR(1000)",
+        "key": "",
+        "nullable": "NULL"
+      },
+      {
+        "name": "imported_at",
+        "type": "TIMESTAMP",
+        "key": "",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "factory_industry_category_rule": [
+      {
+        "name": "industry_prefix",
+        "type": "VARCHAR(3)",
+        "key": "PK",
+        "nullable": "NOT NULL"
+      },
+      {
+        "name": "category_id",
+        "type": "BIGINT",
+        "key": "FK",
+        "nullable": "NOT NULL"
+      }
+    ],
+    "factory_category": [
+      {
+        "name": "factory_id",
+        "type": "BIGINT",
+        "key": "",
+        "nullable": "VIEW"
+      },
+      {
+        "name": "category_id",
+        "type": "BIGINT",
+        "key": "",
+        "nullable": "VIEW"
+      }
+    ]
+  },
+  "layouts": [
+    [
+      "company",
+      60,
+      190,
+      590,
+      "회사"
+    ],
+    [
+      "region",
+      60,
+      420,
+      590,
+      "지역"
+    ],
+    [
+      "factory_industry",
+      60,
+      650,
+      590,
+      "공장 업종 코드"
+    ],
+    [
+      "factory_product",
+      60,
+      900,
+      590,
+      "공장–제품 연결"
+    ],
+    [
+      "product",
+      60,
+      1200,
+      590,
+      "제품 · 호환성 유지"
+    ],
+    [
+      "factory",
+      850,
+      190,
+      700,
+      "공장"
+    ],
+    [
+      "factory_category",
+      850,
+      1150,
+      700,
+      "조회용 뷰 · 물리 FK 없음"
+    ],
+    [
+      "category",
+      1750,
+      190,
+      590,
+      "카테고리"
+    ],
+    [
+      "factory_industry_category_rule",
+      1750,
+      450,
+      590,
+      "업종 분류 규칙"
+    ],
+    [
+      "admins",
+      1750,
+      730,
+      590,
+      "관리자 · 독립 테이블"
+    ],
+    [
+      "data_imports",
+      1750,
+      1100,
+      590,
+      "수집 이력 · 독립 테이블"
+    ]
+  ]
+}
