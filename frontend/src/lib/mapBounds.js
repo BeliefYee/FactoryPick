@@ -2,7 +2,8 @@
 // This is an application boundary, not the provider's tile coverage contract.
 // Leave a southern margin before the satellite tile edge becomes visible.
 export const MAP_AREA = { south: 31.5, west: 120, north: 43, east: 136 }
-export const NATIONAL_CENTER = { latitude: 36.3, longitude: 127.7 }
+// Shift the national view south so Jeju has room below its markers.
+export const NATIONAL_CENTER = { latitude: 35.8, longitude: 127.7 }
 export const MAX_MAP_LEVEL = 13
 
 export function viewportCorrection(center, bounds, area = MAP_AREA) {
