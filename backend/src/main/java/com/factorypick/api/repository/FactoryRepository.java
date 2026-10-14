@@ -157,6 +157,13 @@ public int saveFactoryManageNo(long factoryId, String factoryManageNo) {
                 """, Map.of("id", id), String.class);
     }
 
+    public int saveMainProductText(long id, String text) {
+        return jdbc.update("""
+                UPDATE factory SET main_product_text=COALESCE(:text,main_product_text)
+                WHERE factory_id=:id
+                """, new MapSqlParameterSource("id", id).addValue("text", cleanNull(text)));
+    }
+
     public int savePrimaryIndustryCode(long id, String code) {
         return jdbc.update("""
                 UPDATE factory SET primary_industry_code=COALESCE(:code,primary_industry_code)

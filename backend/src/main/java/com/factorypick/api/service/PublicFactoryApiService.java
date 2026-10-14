@@ -143,6 +143,7 @@ public class PublicFactoryApiService {
                 : item.irsttNm()
         );
         factoryRepository.savePrimaryIndustryCode(factoryId, item.rprsntvIndutyCode());
+        factoryRepository.saveMainProductText(factoryId, item.mainProductCn());
 
         try {
             geocodingService.geocode(factoryId);
