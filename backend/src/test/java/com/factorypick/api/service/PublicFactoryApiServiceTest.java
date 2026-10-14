@@ -107,7 +107,8 @@ class PublicFactoryApiServiceTest {
                 .andRespond(withSuccess("""
                         {"body":{"totalCount":101,"items":{"item":[
                           {"fctryManageNo":"valid","cmpnyNm":"정상 공장",
-                           "rnAdres":"서울특별시 송파구 올림픽로 300","rprsntvIndutyCode":"26111"}
+                           "rnAdres":"서울특별시 송파구 올림픽로 300","rprsntvIndutyCode":"26111",
+                           "mainProductCn":"반도체, 전자부품"}
                         ]}}}
                         """, MediaType.APPLICATION_JSON));
         if (existing) {
@@ -131,6 +132,7 @@ class PublicFactoryApiServiceTest {
         verify(factories).saveFactoryManageNo(42L, "valid");
         verify(factories).saveIndustrialComplexName(42L, "산업단지");
         verify(factories).savePrimaryIndustryCode(42L, "26111");
+        verify(factories).saveMainProductText(42L, "반도체, 전자부품");
         verify(geocoding).geocode(42L);
         verifyNoMoreInteractions(factories, geocoding);
         server.verify();
